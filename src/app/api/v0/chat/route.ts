@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       .from('projects')
       .update({
         v0_chat_id: chat.id,
-        preview_url: chat.demo,
+        preview_url: chat.demoUrl || chat.webUrl,
         updated_at: new Date().toISOString(),
       })
       .eq('id', project_id)
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     // Store message in our DB
     await supabase.from('messages').insert([
       { project_id, role: 'user', content: message },
-      { project_id, role: 'assistant', content: `Preview ready: ${chat.demo}` },
+      { project_id, role: 'assistant', content: `Preview ready` },
     ])
 
     return NextResponse.json({ chat })

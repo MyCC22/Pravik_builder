@@ -14,7 +14,8 @@
     "openai": "^6.27.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "twilio": "^5.12.2"
+    "twilio": "^5.12.2",
+    "v0-sdk": "^0.16.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

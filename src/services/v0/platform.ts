@@ -1,49 +1,45 @@
-import type { V0Chat, V0Deployment } from '@/lib/types'
+import { createClient } from 'v0-sdk'
 
-const V0_API_BASE = 'https://api.v0.dev/v1'
+let client: ReturnType<typeof createClient> | null = null
 
-function headers() {
+function getClient() {
+  if (!client) {
+    client = createClient({ apiKey: process.env.V0_API_KEY })
+  }
+  return client
+}
+
+export interface V0ChatResult {
+  id: string
+  webUrl: string
+  demoUrl: string | null
+  latestVersionId: string | null
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractChatResult(chat: any, fallbackId?: string): V0ChatResult {
   return {
-    Authorization: `Bearer ${process.env.V0_API_KEY}`,
-    'Content-Type': 'application/json',
+    id: chat.id || fallbackId || '',
+    webUrl: chat.webUrl || '',
+    demoUrl: chat.latestVersion?.demoUrl || chat.demo || null,
+    latestVersionId: chat.latestVersion?.id || null,
   }
 }
 
-export async function createChat(message: string): Promise<V0Chat> {
-  const res = await fetch(`${V0_API_BASE}/chats`, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify({ message }),
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(`v0 createChat failed: ${res.status} ${JSON.stringify(err)}`)
-  }
-  return res.json()
+export async function createChat(message: string): Promise<V0ChatResult> {
+  const chat = await getClient().chats.create({ message })
+  return extractChatResult(chat)
 }
 
-export async function sendMessage(chatId: string, message: string): Promise<V0Chat> {
-  const res = await fetch(`${V0_API_BASE}/chats/${chatId}/messages`, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify({ message }),
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(`v0 sendMessage failed: ${res.status} ${JSON.stringify(err)}`)
-  }
-  return res.json()
+export async function sendMessage(chatId: string, message: string): Promise<V0ChatResult> {
+  const chat = await getClient().chats.sendMessage({ chatId, message })
+  return extractChatResult(chat, chatId)
 }
 
-export async function createDeployment(projectId: string, chatId: string, versionId: string): Promise<V0Deployment> {
-  const res = await fetch(`${V0_API_BASE}/deployments`, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify({ projectId, chatId, versionId }),
+export async function createDeployment(projectId: string, chatId: string, versionId: string) {
+  return getClient().deployments.create({
+    projectId,
+    chatId,
+    versionId,
   })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(`v0 deploy failed: ${res.status} ${JSON.stringify(err)}`)
-  }
-  return res.json()
 }

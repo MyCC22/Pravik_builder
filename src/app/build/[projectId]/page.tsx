@@ -72,8 +72,10 @@ export default function BuilderPage() {
           result = await res.json()
         }
 
-        if (result.chat?.demo) {
-          setPreviewUrl(result.chat.demo)
+        if (result.chat?.demoUrl) {
+          setPreviewUrl(result.chat.demoUrl)
+        } else if (result.chat?.webUrl) {
+          setPreviewUrl(result.chat.webUrl)
         }
 
         const assistantMsg: Message = {
