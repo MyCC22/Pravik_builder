@@ -5,14 +5,27 @@ import { ReactNode } from 'react'
 interface BuilderLayoutProps {
   preview: ReactNode
   chat: ReactNode
+  shareUrl?: string | null
 }
 
-export function BuilderLayout({ preview, chat }: BuilderLayoutProps) {
+export function BuilderLayout({ preview, chat, shareUrl }: BuilderLayoutProps) {
   return (
     <div className="flex flex-col h-dvh bg-black">
       {/* Preview panel - 70% */}
       <div className="h-[70dvh] w-full border-b border-white/10 relative">
         {preview}
+        {shareUrl && (
+          <div className="absolute top-2 right-2 z-10">
+            <a
+              href={shareUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-full backdrop-blur-sm transition-colors"
+            >
+              Share link
+            </a>
+          </div>
+        )}
       </div>
 
       {/* Chat panel - 30% */}

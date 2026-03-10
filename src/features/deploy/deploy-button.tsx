@@ -5,59 +5,28 @@ import { Button } from '@/components/ui/button'
 
 interface DeployButtonProps {
   projectId: string
-  chatId: string | null
   disabled?: boolean
 }
 
-export function DeployButton({ projectId, chatId, disabled }: DeployButtonProps) {
-  const [deploying, setDeploying] = useState(false)
-  const [deployUrl, setDeployUrl] = useState<string | null>(null)
+export function DeployButton({ projectId, disabled }: DeployButtonProps) {
+  const [copied, setCopied] = useState(false)
 
-  const handleDeploy = async () => {
-    if (!chatId) return
-    setDeploying(true)
+  const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/site/${projectId}`
 
-    try {
-      const res = await fetch('/api/v0/deploy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          project_id: projectId,
-          chat_id: chatId,
-          version_id: 'latest',
-        }),
-      })
-      const { deployment } = await res.json()
-      if (deployment?.url) {
-        setDeployUrl(deployment.url)
-      }
-    } finally {
-      setDeploying(false)
-    }
-  }
-
-  if (deployUrl) {
-    return (
-      <a
-        href={deployUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-xs text-green-400 underline"
-      >
-        Live: {deployUrl}
-      </a>
-    )
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(shareUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
     <Button
       variant="secondary"
       size="sm"
-      onClick={handleDeploy}
-      loading={deploying}
-      disabled={disabled || !chatId}
+      onClick={handleCopy}
+      disabled={disabled}
     >
-      Deploy
+      {copied ? 'Copied!' : 'Copy Link'}
     </Button>
   )
 }

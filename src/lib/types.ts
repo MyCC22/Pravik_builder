@@ -1,3 +1,5 @@
+import type { TemplateConfig } from '@/templates/types'
+
 export interface User {
   id: string
   phone_number: string
@@ -11,6 +13,7 @@ export interface Project {
   v0_chat_id: string | null
   v0_project_id: string | null
   preview_url: string | null
+  template_config: TemplateConfig | null
   created_at: string
   updated_at: string
 }
@@ -31,16 +34,4 @@ export interface Session {
   source: 'web' | 'twilio'
   expires_at: string
   created_at: string
-}
-
-export interface V0Chat {
-  id: string
-  demo: string
-  files?: { name: string; content: string }[]
-}
-
-export interface V0Deployment {
-  id: string
-  url: string
-  status: string
 }

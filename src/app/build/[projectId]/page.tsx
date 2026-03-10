@@ -15,7 +15,6 @@ export default function BuilderPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [chatId, setChatId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user || !projectId) return
@@ -28,8 +27,9 @@ export default function BuilderPage() {
         const proj = data.projects?.find((p: Project) => p.id === projectId)
         if (proj) {
           setProject(proj)
-          setPreviewUrl(proj.preview_url)
-          setChatId(proj.v0_chat_id)
+          if (proj.template_config) {
+            setPreviewUrl(`/api/builder/preview/${projectId}`)
+          }
         }
       })
   }, [user, projectId])
@@ -49,40 +49,25 @@ export default function BuilderPage() {
       setLoading(true)
 
       try {
-        let result
+        const res = await fetch('/api/builder/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, project_id: projectId }),
+        })
+        const result = await res.json()
 
-        if (!chatId) {
-          const res = await fetch('/api/v0/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, project_id: projectId }),
-          })
-          result = await res.json()
-          setChatId(result.chat?.id)
-        } else {
-          const res = await fetch('/api/v0/message', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: chatId,
-              message,
-              project_id: projectId,
-            }),
-          })
-          result = await res.json()
+        if (result.error) {
+          throw new Error(result.error)
         }
 
-        if (result.chat?.demoUrl) {
-          setPreviewUrl(result.chat.demoUrl)
-        } else if (result.chat?.webUrl) {
-          setPreviewUrl(result.chat.webUrl)
-        }
+        // Force iframe refresh by appending timestamp
+        setPreviewUrl(`/api/builder/preview/${projectId}?t=${Date.now()}`)
 
         const assistantMsg: Message = {
           id: `temp-assistant-${Date.now()}`,
           project_id: projectId,
           role: 'assistant',
-          content: 'Preview updated',
+          content: `Updated: ${result.config?.template} / ${result.config?.theme}`,
           created_at: new Date().toISOString(),
         }
         setMessages((prev) => [...prev, assistantMsg])
@@ -100,13 +85,18 @@ export default function BuilderPage() {
         setLoading(false)
       }
     },
-    [projectId, chatId]
+    [projectId]
   )
+
+  const shareUrl = projectId
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/site/${projectId}`
+    : null
 
   return (
     <BuilderLayout
       preview={<PreviewPanel url={previewUrl} loading={loading} />}
       chat={<ChatPanel messages={messages} onSend={handleSend} loading={loading} />}
+      shareUrl={shareUrl}
     />
   )
 }
