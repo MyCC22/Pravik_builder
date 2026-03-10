@@ -9,13 +9,13 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@supabase/supabase-js": "^2.99.0",
     "next": "16.1.6",
     "openai": "^6.27.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "twilio": "^5.12.2",
-    "v0-sdk": "^0.16.4"
+    "twilio": "^5.12.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
