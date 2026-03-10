@@ -34,6 +34,8 @@ export default function BuilderPage() {
       })
   }, [user, projectId])
 
+  const isUpdate = !!previewUrl
+
   const handleSend = useCallback(
     async (message: string) => {
       if (!projectId) return
@@ -68,11 +70,18 @@ export default function BuilderPage() {
         // Force iframe refresh by appending timestamp
         setPreviewUrl(`/api/builder/preview/${projectId}?t=${Date.now()}`)
 
+        const wasUpdate = !!previewUrl
+        const templateLabel = result.config?.template?.replace(/-/g, ' ') || 'website'
+        const themeLabel = result.config?.theme || 'default'
+        const assistantContent = wasUpdate
+          ? `Done! I've updated your website with the changes you requested.`
+          : `Your website is ready! I used the ${templateLabel} template with the ${themeLabel} theme.`
+
         const assistantMsg: Message = {
           id: `temp-assistant-${Date.now()}`,
           project_id: projectId,
           role: 'assistant',
-          content: `Updated: ${result.config?.template} / ${result.config?.theme}`,
+          content: assistantContent,
           created_at: new Date().toISOString(),
         }
         setMessages((prev) => [...prev, assistantMsg])
@@ -99,7 +108,7 @@ export default function BuilderPage() {
 
   return (
     <BuilderLayout
-      preview={<PreviewPanel url={previewUrl} loading={loading} />}
+      preview={<PreviewPanel url={previewUrl} loading={loading} isUpdate={isUpdate} />}
       chat={<ChatPanel messages={messages} onSend={handleSend} loading={loading} />}
       shareUrl={shareUrl}
     />

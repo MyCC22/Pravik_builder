@@ -41,12 +41,18 @@ export async function POST(req: NextRequest) {
       .eq('id', project_id)
 
     // Store messages
+    const isUpdate = !!currentConfig
+    const templateLabel = config.template.replace(/-/g, ' ')
+    const assistantContent = isUpdate
+      ? `Updated your website with the requested changes.`
+      : `Created your website using the ${templateLabel} template with the ${config.theme} theme.`
+
     await supabase.from('messages').insert([
       { project_id, role: 'user', content: message },
-      { project_id, role: 'assistant', content: `Updated: ${config.template} / ${config.theme}` },
+      { project_id, role: 'assistant', content: assistantContent },
     ])
 
-    return NextResponse.json({ config, previewUrl })
+    return NextResponse.json({ config, previewUrl, isUpdate })
   } catch (error) {
     console.error('Builder generate error:', error)
     return NextResponse.json(

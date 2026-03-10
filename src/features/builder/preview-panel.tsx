@@ -5,15 +5,18 @@ import { Loading } from '@/components/ui/loading'
 interface PreviewPanelProps {
   url: string | null
   loading?: boolean
+  isUpdate?: boolean
 }
 
-export function PreviewPanel({ url, loading }: PreviewPanelProps) {
+export function PreviewPanel({ url, loading, isUpdate }: PreviewPanelProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full bg-black">
         <div className="text-center space-y-3">
           <Loading size="lg" />
-          <p className="text-gray-400 text-sm">Generating your website...</p>
+          <p className="text-gray-400 text-sm">
+            {isUpdate ? 'Updating your website...' : 'Generating your website...'}
+          </p>
         </div>
       </div>
     )
