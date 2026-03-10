@@ -36,7 +36,7 @@ export function PreviewPanel({ url, loading }: PreviewPanelProps) {
       src={url}
       className="w-full h-full border-0 bg-white"
       title="Website Preview"
-      sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+      allow="clipboard-write"
     />
   )
 }
