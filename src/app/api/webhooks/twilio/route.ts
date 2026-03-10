@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
 
     // Return TwiML voice response
     const twiml = generateTwiML(
-      'Welcome to Pravik Builder! We just sent you a text message with a link to start building your website. Open it on your phone to get started. Goodbye!'
+      'Welcome to the new world! We just sent you a text message with a link to start building your website. Open it on your phone to get started. Goodbye!'
     )
 
     return new NextResponse(twiml, {
