@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { pickTemplate } from '@/services/ai/template-picker'
 import { getSupabaseClient } from '@/services/supabase/client'
 
+export const maxDuration = 30
+
 export async function POST(req: NextRequest) {
   try {
     const { message, project_id } = await req.json()

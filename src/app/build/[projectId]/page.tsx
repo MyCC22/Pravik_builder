@@ -54,6 +54,11 @@ export default function BuilderPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message, project_id: projectId }),
         })
+
+        if (!res.ok) {
+          throw new Error(`Server error: ${res.status}`)
+        }
+
         const result = await res.json()
 
         if (result.error) {
