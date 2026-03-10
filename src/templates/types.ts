@@ -7,7 +7,7 @@ export const TEMPLATE_IDS = [
 
 export type TemplateId = (typeof TEMPLATE_IDS)[number]
 
-export const THEME_IDS = ['ocean', 'sunset', 'violet', 'forest', 'mono'] as const
+export const THEME_IDS = ['clean', 'bold', 'vibrant', 'warm'] as const
 
 export type ThemeId = (typeof THEME_IDS)[number]
 

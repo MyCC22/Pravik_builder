@@ -1,7 +1,7 @@
 import type { Block } from '../types'
 
 const BLOCK_TYPES = ['navbar', 'hero', 'features', 'gallery', 'pricing', 'cta', 'contact', 'footer', 'testimonials', 'custom']
-const THEMES = ['ocean', 'sunset', 'violet', 'forest', 'mono']
+const THEMES = ['clean', 'bold', 'vibrant', 'warm']
 
 export function getRouterPrompt(blocks: Block[], currentTheme: string | null): string {
   const hasBlocks = blocks.length > 0

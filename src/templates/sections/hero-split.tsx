@@ -2,12 +2,14 @@ import { escapeHtml } from '../render'
 
 export function renderHeroSplit(title: string, subtitle: string, tagline?: string): string {
   const taglineHtml = tagline
-    ? `<p style="font-size:14px;color:var(--accent);margin-bottom:12px;text-transform:uppercase;letter-spacing:2px">${escapeHtml(tagline)}</p>`
+    ? `<p style="font-size:0.8125rem;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:1rem">${escapeHtml(tagline)}</p>`
     : ''
 
-  return `<section style="padding:80px 24px;max-width:960px;margin:0 auto">
-    ${taglineHtml}
-    <h1 style="font-size:40px;font-weight:300;line-height:1.3;margin-bottom:16px">${escapeHtml(title)}</h1>
-    <p style="font-size:18px;color:var(--muted);max-width:560px;line-height:1.6">${escapeHtml(subtitle)}</p>
+  return `<section style="padding:6rem 2rem;max-width:1200px;margin:0 auto">
+    <div style="max-width:640px">
+      ${taglineHtml}
+      <h1 style="font-size:clamp(2.25rem,4.5vw,3.5rem);font-weight:300;line-height:1.2;letter-spacing:-0.025em;color:var(--text)">${escapeHtml(title)}</h1>
+      <p style="margin-top:1.5rem;font-size:1.125rem;color:var(--muted);line-height:1.75;max-width:520px">${escapeHtml(subtitle)}</p>
+    </div>
   </section>`
 }

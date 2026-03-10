@@ -10,11 +10,10 @@ Templates available:
 
 const THEME_DESCRIPTIONS = `
 Color themes available:
-- "ocean": Dark slate background, blue accent — professional, tech
-- "sunset": Warm cream background, orange accent — warm, inviting
-- "violet": Deep purple background, violet accent — modern, creative
-- "forest": Light mint background, green accent — natural, fresh
-- "mono": White background, black accent — timeless, minimal
+- "clean": White background (#fff), dark navy text, blue accent (#3b82f6) — professional, trustworthy SaaS feel like TaxPal. Inter font, subtle shadows, clean rounded corners.
+- "bold": Near-black background (#09090b), white text, indigo accent (#6366f1) — sleek dark mode, modern tech/startup. Glowing accents, strong contrast.
+- "vibrant": Pastel gradient background (blue→purple→green), dark slate text, bold blue accent (#2563eb) — colorful, energetic like DeceptiConf. Eye-catching gradients, frosted-glass surfaces.
+- "warm": Warm off-white (#faf8f5), rich brown text, burnt orange accent (#c2410c) — premium, sophisticated, cozy. Perfect for food, hospitality, luxury brands.
 `
 
 const CONTENT_SCHEMA = `
@@ -47,7 +46,7 @@ Rules:
 - Return ONLY valid JSON, no markdown fences, no explanation
 - Pick the template and theme that best match the user's description
 - Generate realistic, professional content based on what the user describes
-- If the user doesn't specify a style, default to "landing-light" with "mono" theme
+- If the user doesn't specify a style, default to "landing-light" with "clean" theme
 - For landing templates, always include features (3-6), at least 2 testimonials, and 2-3 pricing plans
 - For portfolio templates, always include galleryItems (4-8) and contactEmail
 - Template IDs: ${JSON.stringify(TEMPLATE_IDS)}

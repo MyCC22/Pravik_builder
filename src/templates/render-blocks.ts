@@ -1,7 +1,5 @@
 import { getSupabaseClient } from '@/services/supabase/client'
 import { getThemeCSS } from './themes'
-import type { ThemeId } from './types'
-import { THEME_IDS } from './types'
 
 export async function renderFromBlocks(projectId: string): Promise<string | null> {
   const supabase = getSupabaseClient()
@@ -24,9 +22,7 @@ export async function renderFromBlocks(projectId: string): Promise<string | null
     .eq('id', projectId)
     .single()
 
-  const themeId: ThemeId = THEME_IDS.includes(project?.theme as ThemeId)
-    ? (project!.theme as ThemeId)
-    : 'ocean'
+  const themeId = project?.theme || 'clean'
   const siteName = project?.name || 'Website'
 
   const themeCSS = getThemeCSS(themeId)

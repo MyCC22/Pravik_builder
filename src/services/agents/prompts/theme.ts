@@ -2,11 +2,10 @@ import { THEME_IDS } from '@/templates/types'
 
 const THEME_DETAILS = `
 Available themes:
-- "ocean": Dark slate background (#0f172a), white text, blue accent (#3b82f6) — professional, tech, corporate
-- "sunset": Warm cream background (#fefce8), dark text, orange accent (#f97316) — warm, inviting, friendly
-- "violet": Deep purple background (#0c0a1a), light text, violet accent (#8b5cf6) — modern, creative, bold
-- "forest": Light mint background (#f0fdf4), dark green text, green accent (#16a34a) — natural, fresh, organic
-- "mono": White background (#fafafa), black text, black accent (#18181b) — timeless, minimal, clean
+- "clean": White background (#fff), dark navy text (#0f172a), blue accent (#3b82f6) — professional, trustworthy, SaaS. Like TaxPal. Subtle shadows, clean rounded corners.
+- "bold": Near-black background (#09090b), white text (#fafafa), indigo accent (#6366f1) — sleek dark mode, modern tech/startup. Strong contrast, elevated surfaces.
+- "vibrant": Pastel gradient background (blue→purple→green), dark slate text (#1e293b), bold blue accent (#2563eb) — colorful, energetic. Like DeceptiConf. Frosted-glass cards on gradient.
+- "warm": Warm off-white (#faf8f5), rich brown text (#1c1210), burnt orange accent (#c2410c) — premium, sophisticated, cozy. Perfect for food, hospitality, luxury.
 `
 
 export function getThemePrompt(currentTheme: string | null): string {
@@ -17,12 +16,11 @@ Current theme: ${currentTheme || 'none'}
 ${THEME_DETAILS}
 
 Common mappings for vague requests:
-- "warmer" / "friendlier" → sunset
-- "darker" / "more professional" → ocean
-- "cooler" / "creative" / "modern" → violet
-- "natural" / "organic" / "fresh" → forest
-- "cleaner" / "simpler" / "minimal" → mono
-- "lighter" → if currently dark (ocean/violet), try forest or mono; if already light, try sunset
+- "warmer" / "friendlier" / "cozy" → warm
+- "darker" / "sleek" / "modern" / "tech" → bold
+- "colorful" / "fun" / "energetic" / "creative" → vibrant
+- "cleaner" / "simpler" / "minimal" / "professional" → clean
+- "lighter" → if currently dark (bold), try clean or vibrant; if already light, try vibrant or warm
 
 Return a JSON object:
 {

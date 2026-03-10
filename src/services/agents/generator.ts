@@ -92,7 +92,7 @@ export async function generateSite(
     : 'landing-light'
   const theme: ThemeId = THEME_IDS.includes(parsed.theme as ThemeId)
     ? (parsed.theme as ThemeId)
-    : 'mono'
+    : 'clean'
 
   const config: TemplateConfig = { ...parsed, template, theme }
 

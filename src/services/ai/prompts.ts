@@ -11,11 +11,10 @@ Templates available:
 
 const THEME_DESCRIPTIONS = `
 Color themes available:
-- "ocean": Dark slate background (#0f172a), blue accent — professional, tech
-- "sunset": Warm cream background (#fefce8), orange accent — warm, inviting
-- "violet": Deep purple background (#0c0a1a), violet accent — modern, creative
-- "forest": Light mint background (#f0fdf4), green accent — natural, fresh
-- "mono": White background (#fafafa), black accent — timeless, minimal
+- "clean": White background, dark navy text, blue accent — professional, trustworthy SaaS
+- "bold": Near-black background, white text, indigo accent — sleek dark mode, tech startup
+- "vibrant": Pastel gradient background, dark text, bold blue accent — colorful, energetic
+- "warm": Warm off-white, rich brown text, burnt orange accent — premium, sophisticated
 `
 
 const CONTENT_SCHEMA = `
@@ -48,7 +47,7 @@ Rules:
 - Return ONLY valid JSON, no markdown, no explanation
 - Pick the template and theme that best match the user's description
 - Generate realistic, professional content based on what the user describes
-- If the user doesn't specify a style, default to "landing-light" with "mono" theme
+- If the user doesn't specify a style, default to "landing-light" with "clean" theme
 - For landing templates, always include features (3-6), at least 2 testimonials, and 2-3 pricing plans
 - For portfolio templates, always include galleryItems (4-8) and contactEmail
 - Template IDs: ${JSON.stringify(TEMPLATE_IDS)}
