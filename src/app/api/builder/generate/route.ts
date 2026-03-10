@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { pickTemplate } from '@/services/ai/template-picker'
+import { handleMessage } from '@/services/agents/orchestrator'
 import { getSupabaseClient } from '@/services/supabase/client'
 
 export const maxDuration = 30
@@ -15,44 +15,25 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Run the multi-agent orchestrator
+    const result = await handleMessage(message, project_id)
+
     const supabase = getSupabaseClient()
 
-    // Load current config (null for new projects)
-    const { data: project } = await supabase
-      .from('projects')
-      .select('template_config')
-      .eq('id', project_id)
-      .single()
-
-    const currentConfig = project?.template_config ?? null
-
-    // Call Claude Haiku
-    const config = await pickTemplate(message, currentConfig)
-
-    // Store updated config and preview URL
-    const previewUrl = `/site/${project_id}`
-    await supabase
-      .from('projects')
-      .update({
-        template_config: config,
-        preview_url: previewUrl,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', project_id)
-
     // Store messages
-    const isUpdate = !!currentConfig
-    const templateLabel = config.template.replace(/-/g, ' ')
-    const assistantContent = isUpdate
-      ? `Updated your website with the requested changes.`
-      : `Created your website using the ${templateLabel} template with the ${config.theme} theme.`
-
     await supabase.from('messages').insert([
       { project_id, role: 'user', content: message },
-      { project_id, role: 'assistant', content: assistantContent },
+      { project_id, role: 'assistant', content: result.message },
     ])
 
-    return NextResponse.json({ config, previewUrl, isUpdate })
+    const previewUrl = `/site/${project_id}`
+
+    return NextResponse.json({
+      action: result.action,
+      message: result.message,
+      question: result.question || null,
+      previewUrl,
+    })
   } catch (error) {
     console.error('Builder generate error:', error)
     return NextResponse.json(

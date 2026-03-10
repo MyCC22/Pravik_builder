@@ -14,6 +14,7 @@ export interface Project {
   v0_project_id: string | null
   preview_url: string | null
   template_config: TemplateConfig | null
+  theme: string | null
   created_at: string
   updated_at: string
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/services/supabase/client'
 import { renderTemplate } from '@/templates/render'
+import { renderFromBlocks } from '@/templates/render-blocks'
 
 export async function GET(
   _req: NextRequest,
@@ -9,6 +10,15 @@ export async function GET(
   try {
     const { projectId } = await params
 
+    // Try block-based rendering first
+    const blockHtml = await renderFromBlocks(projectId)
+    if (blockHtml) {
+      return new NextResponse(blockHtml, {
+        headers: { 'Content-Type': 'text/html' },
+      })
+    }
+
+    // Fall back to old template_config rendering
     const supabase = getSupabaseClient()
     const { data: project, error } = await supabase
       .from('projects')

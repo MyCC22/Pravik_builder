@@ -5,17 +5,30 @@ import { Loading } from '@/components/ui/loading'
 interface PreviewPanelProps {
   url: string | null
   loading?: boolean
-  isUpdate?: boolean
+  action?: string | null
 }
 
-export function PreviewPanel({ url, loading, isUpdate }: PreviewPanelProps) {
+function getLoadingText(action: string | null): string {
+  switch (action) {
+    case 'theme_changed':
+      return 'Switching theme...'
+    case 'edited':
+    case 'removed':
+    case 'reordered':
+      return 'Updating...'
+    default:
+      return 'Generating your website...'
+  }
+}
+
+export function PreviewPanel({ url, loading, action }: PreviewPanelProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full bg-black">
         <div className="text-center space-y-3">
           <Loading size="lg" />
           <p className="text-gray-400 text-sm">
-            {isUpdate ? 'Updating your website...' : 'Generating your website...'}
+            {url ? 'Updating...' : getLoadingText(action ?? null)}
           </p>
         </div>
       </div>

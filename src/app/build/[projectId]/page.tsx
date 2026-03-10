@@ -15,6 +15,7 @@ export default function BuilderPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [action, setAction] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user || !projectId) return
@@ -34,8 +35,6 @@ export default function BuilderPage() {
       })
   }, [user, projectId])
 
-  const isUpdate = !!previewUrl
-
   const handleSend = useCallback(
     async (message: string) => {
       if (!projectId) return
@@ -49,6 +48,7 @@ export default function BuilderPage() {
       }
       setMessages((prev) => [...prev, tempMsg])
       setLoading(true)
+      setAction(null)
 
       try {
         const res = await fetch('/api/builder/generate', {
@@ -67,21 +67,19 @@ export default function BuilderPage() {
           throw new Error(result.error)
         }
 
-        // Force iframe refresh by appending timestamp
-        setPreviewUrl(`/api/builder/preview/${projectId}?t=${Date.now()}`)
+        setAction(result.action)
 
-        const wasUpdate = !!previewUrl
-        const templateLabel = result.config?.template?.replace(/-/g, ' ') || 'website'
-        const themeLabel = result.config?.theme || 'default'
-        const assistantContent = wasUpdate
-          ? `Done! I've updated your website with the changes you requested.`
-          : `Your website is ready! I used the ${templateLabel} template with the ${themeLabel} theme.`
+        // Only refresh preview for non-clarify actions
+        if (result.action !== 'clarify') {
+          setPreviewUrl(`/api/builder/preview/${projectId}?t=${Date.now()}`)
+        }
 
+        // Use the server's message directly
         const assistantMsg: Message = {
           id: `temp-assistant-${Date.now()}`,
           project_id: projectId,
           role: 'assistant',
-          content: assistantContent,
+          content: result.message,
           created_at: new Date().toISOString(),
         }
         setMessages((prev) => [...prev, assistantMsg])
@@ -108,7 +106,7 @@ export default function BuilderPage() {
 
   return (
     <BuilderLayout
-      preview={<PreviewPanel url={previewUrl} loading={loading} isUpdate={isUpdate} />}
+      preview={<PreviewPanel url={previewUrl} loading={loading} action={action} />}
       chat={<ChatPanel messages={messages} onSend={handleSend} loading={loading} />}
       shareUrl={shareUrl}
     />
