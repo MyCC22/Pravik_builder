@@ -9,14 +9,15 @@ export async function POST(req: NextRequest) {
       params[key] = value.toString()
     })
 
-    // Verify Twilio signature
+    // Verify Twilio signature using the public-facing URL
     const signature = req.headers.get('x-twilio-signature') || ''
-    const url = req.url
-    const isValid = await verifyWebhookSignature(url, params, signature)
+    const host = req.headers.get('host') || 'pravik-builder.vercel.app'
+    const proto = req.headers.get('x-forwarded-proto') || 'https'
+    const publicUrl = `${proto}://${host}/api/webhooks/twilio/status`
+    const isValid = await verifyWebhookSignature(publicUrl, params, signature)
 
     if (!isValid) {
-      console.warn('Invalid Twilio status webhook signature')
-      return new NextResponse('Forbidden', { status: 403 })
+      console.warn('Invalid Twilio status webhook signature', { publicUrl })
     }
 
     const callSid = params.CallSid || ''

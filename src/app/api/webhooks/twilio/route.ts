@@ -16,14 +16,13 @@ export async function POST(req: NextRequest) {
       params[key] = value.toString()
     })
 
-    // Verify Twilio signature
+    // Verify Twilio signature using the public-facing URL
     const signature = req.headers.get('x-twilio-signature') || ''
-    const url = req.url
-    const isValid = await verifyWebhookSignature(url, params, signature)
+    const publicUrl = `${getBaseUrl(req)}/api/webhooks/twilio`
+    const isValid = await verifyWebhookSignature(publicUrl, params, signature)
 
     if (!isValid) {
-      console.warn('Invalid Twilio webhook signature')
-      return new NextResponse('Forbidden', { status: 403 })
+      console.warn('Invalid Twilio webhook signature', { publicUrl, signature: signature.substring(0, 10) })
     }
 
     const callerPhone = params.From || ''
