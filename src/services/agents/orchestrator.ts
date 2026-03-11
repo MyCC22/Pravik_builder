@@ -115,10 +115,16 @@ function convertSplitToBackground(html: string, imageUrl: string): string {
 </section>`
 }
 
+export interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
 export async function handleMessage(
   message: string,
   projectId: string,
-  imageUrls?: string[]
+  imageUrls?: string[],
+  history?: ChatMessage[]
 ): Promise<AgentResponse> {
   const supabase = getSupabaseClient()
   // Service role client for write operations that need to bypass RLS
@@ -179,7 +185,7 @@ export async function handleMessage(
   const messageWithImageContext = imageUrls?.length
     ? `${message}\n\n[User attached ${imageUrls.length} image(s)]`
     : message
-  const route = await routeIntent(messageWithImageContext, currentBlocks, currentTheme)
+  const route = await routeIntent(messageWithImageContext, currentBlocks, currentTheme, history)
 
   switch (route.intent) {
     case 'generate_site': {
@@ -307,7 +313,7 @@ export async function handleMessage(
       }
 
       const allBlockTypes = currentBlocks.map(b => b.block_type)
-      const updatedHtml = await editBlock(targetBlock, message, allBlockTypes, projectId)
+      const updatedHtml = await editBlock(targetBlock, message, allBlockTypes, projectId, history)
 
       await supabase
         .from('blocks')

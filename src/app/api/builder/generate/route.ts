@@ -6,7 +6,7 @@ export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, project_id, image_urls } = await req.json()
+    const { message, project_id, image_urls: imageUrls } = await req.json()
 
     if (!message || !project_id) {
       return NextResponse.json(
@@ -15,10 +15,24 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Run the multi-agent orchestrator (pass image_urls if present)
-    const result = await handleMessage(message, project_id, image_urls)
-
     const supabase = getSupabaseClient()
+
+    // Load recent conversation history for context
+    const { data: recentMessages } = await supabase
+      .from('messages')
+      .select('role, content')
+      .eq('project_id', project_id)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    // Reverse to chronological order (DB returns newest first)
+    const history = (recentMessages || []).reverse().map(m => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content as string,
+    }))
+
+    // Run the multi-agent orchestrator (pass image_urls and history)
+    const result = await handleMessage(message, project_id, imageUrls, history)
 
     // Store messages (include image_urls if present)
     await supabase.from('messages').insert([
@@ -26,7 +40,7 @@ export async function POST(req: NextRequest) {
         project_id,
         role: 'user',
         content: message,
-        ...(image_urls?.length ? { image_urls } : {}),
+        ...(imageUrls?.length ? { image_urls: imageUrls } : {}),
       },
       { project_id, role: 'assistant', content: result.message },
     ])

@@ -12,19 +12,39 @@ function getClient(): Anthropic {
   return client
 }
 
+interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
 export async function editBlock(
   block: Block,
   message: string,
   allBlockTypes: string[],
-  projectId?: string
+  projectId?: string,
+  history?: ChatMessage[]
 ): Promise<string> {
   const systemPrompt = getBlockEditorPrompt(block.block_type, block.html, allBlockTypes, projectId)
+
+  // Build messages array with conversation history for context
+  const messages: Array<{ role: 'user' | 'assistant'; content: string }> = []
+
+  if (history && history.length > 0) {
+    // Include last 6 messages for context (3 turns)
+    const recentHistory = history.slice(-6)
+    for (const msg of recentHistory) {
+      messages.push({ role: msg.role, content: msg.content })
+    }
+  }
+
+  // Add the current message
+  messages.push({ role: 'user', content: message })
 
   const response = await getClient().messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     system: systemPrompt,
-    messages: [{ role: 'user', content: message }],
+    messages,
   })
 
   const text = response.content[0].type === 'text' ? response.content[0].text : ''

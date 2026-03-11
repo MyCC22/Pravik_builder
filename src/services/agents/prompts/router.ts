@@ -62,9 +62,18 @@ Rules:
 - For edit_tool and add_tool: target_blocks can be empty
 - When the user mentions "top" or "header", that's usually the navbar
 - When the user mentions "bottom" or "end", that's usually the footer
-- "Colors", "darker", "lighter", "warmer" → change_theme
+- "Colors", "warmer", "cooler" → change_theme (site-wide color palette changes)
 - "Add phone number" or "change text" on an existing section → edit_block
 - "Add a testimonials section" → add_block
+
+CRITICAL — edit_block vs change_image distinction:
+- change_image = the user wants a DIFFERENT image (swap, replace, new photo, upload a new one, find a new one)
+- edit_block = the user wants to MODIFY how an existing image LOOKS or modify the section's CSS/HTML (darker, lighter, opacity, brightness, blur, overlay, zoom in, crop, reduce/increase opacity, dim, darken the background, lighten, make it more/less transparent)
+- "make the background image darker" → edit_block on hero (adjust the overlay opacity in CSS)
+- "reduce the opacity" → edit_block (CSS change)
+- "darken the hero" → edit_block (adjust overlay)
+- "change the hero image to something with mountains" → change_image (wants a DIFFERENT photo)
+- "use this image as background" [with attachment] → change_image (uploading a new image)
 - "form", "booking form", "fields", "dropdown", "add a field", "change the form", "make required", "update the form" → edit_tool
 - "add a booking form", "add a contact form", "add lead capture" → add_tool
 - "add a contact section", "add a features section" → add_block (HTML section, NOT a tool)
