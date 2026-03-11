@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { getGeneratorPrompt } from './prompts/generator'
-import { TEMPLATE_IDS, THEME_IDS } from '@/templates/types'
+import { TEMPLATE_IDS, THEME_IDS, resolveTemplateId } from '@/templates/types'
 import type { TemplateConfig, TemplateId, ThemeId } from '@/templates/types'
 import { renderTemplate } from '@/templates/render'
 import { getSupabaseClient } from '@/services/supabase/client'
@@ -77,7 +77,7 @@ export async function generateSite(
 
   const response = await getClient().messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 2048,
+    max_tokens: 4096,
     system: systemPrompt,
     messages: [{ role: 'user', content: message }],
   })
@@ -87,9 +87,7 @@ export async function generateSite(
   const parsed = JSON.parse(cleaned) as TemplateConfig
 
   // Validate and fallback
-  const template: TemplateId = TEMPLATE_IDS.includes(parsed.template as TemplateId)
-    ? (parsed.template as TemplateId)
-    : 'landing'
+  const template = resolveTemplateId(parsed.template)
   const theme: ThemeId = THEME_IDS.includes(parsed.theme as ThemeId)
     ? (parsed.theme as ThemeId)
     : 'clean'
