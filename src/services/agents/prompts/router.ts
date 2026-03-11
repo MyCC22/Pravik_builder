@@ -43,11 +43,12 @@ Return a JSON object:
 {
   "intent": "intent_name",
   "target_blocks": ["block_type"],
-  "description": "what you understood the user wants",
+  "description": "what you understood the user wants — for change_image this is used as the image search query",
   "question": "only if intent is clarify, the question to ask",
   "position": number (only for add_block — where to insert, 0-indexed),
   "clone_url": "URL string (only for clone_site)",
-  "clone_mode": "content" | "content_and_style" (only for clone_site)
+  "clone_mode": "content" | "content_and_style" (only for clone_site),
+  "image_placement": "replace" | "background" (only for change_image — see below)
 }
 
 Rules:
@@ -56,7 +57,7 @@ Rules:
 - For add_block: target_blocks should contain the new block type, position should be where to insert it
 - For remove_block: target_blocks should contain the block type(s) to remove
 - For change_theme: target_blocks can be empty
-- For change_image: target_blocks should be the block type containing the image, description should be the desired image search term
+- For change_image: target_blocks should be the block type containing the image
 - For generate_site: target_blocks can be empty
 - For edit_tool and add_tool: target_blocks can be empty
 - When the user mentions "top" or "header", that's usually the navbar
@@ -71,14 +72,19 @@ Rules:
 - "connect button to booking", "link CTA to booking form", "make the button go to booking", "wire button to form" → edit_block on the hero or cta block (this changes the HTML href, not the tool config)
 - "button doesn't work", "CTA link is broken", "button goes to wrong place" → edit_block on the hero or cta block
 - When the user wants to change WHERE a button links to, that's always edit_block (changing HTML), not edit_tool
-- "change image", "different photo", "I don't like the image", "swap the picture", "new background image", "replace the photo" → change_image
-- For change_image: target_blocks should be the block with the image (usually "hero" or "gallery"). Put what kind of image the user wants in "description" (this is used as the image search query).
-- If the user says "change the hero image" with no other description, use the site's business type as the description
-- If unsure which block the user means, use clarify
-- User provides a URL (http/https/www) and says "clone", "copy", "recreate", "rebuild", "make me a site like", "replicate", "base it on" -> clone_site
-- For clone_site: put the URL in "clone_url" field, and add "clone_mode" field:
-  - "content_and_style" if user mentions style: "match the style", "same look", "similar design", "look and feel", "same vibe"
-  - "content" otherwise (default)
-- "clone example.com" -> clone_site with clone_url="https://example.com", clone_mode="content"
-- "recreate example.com and match the style" -> clone_site with clone_url="https://example.com", clone_mode="content_and_style"`
+
+change_image rules:
+- If user says "[User attached N image(s)]" at the end of their message, they have uploaded images. Use change_image intent.
+- target_blocks: the block with the image (usually "hero" or "gallery"). If not specified, default to "hero".
+- description: what kind of image the user wants (used as the search query for finding images). If the user attached images, set description to "user_provided".
+- If user says "change the image" with no attachment and no description, set description to "ask_user".
+- image_placement: determines HOW the image is placed in the section:
+  - "replace" (default): swap the image URL in-place, keep current layout
+  - "background": use as a full-width background image covering the entire section (e.g. "background image", "behind the text", "cover the section", "full width background", "make it the background")
+  Use your natural language understanding here — if the user is asking for the image to be the background of a section, set "background". Otherwise set "replace".
+
+clone_site rules:
+- User provides a URL and wants to clone/recreate/copy that website
+- Put the URL in "clone_url" field
+- clone_mode: "content_and_style" if user mentions matching the style/look/design, "content" otherwise`
 }

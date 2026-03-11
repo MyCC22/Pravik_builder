@@ -19,6 +19,7 @@ export interface RouterResult {
   position?: number
   clone_mode?: 'content' | 'content_and_style'
   clone_url?: string
+  image_placement?: 'replace' | 'background'
 }
 
 export interface AgentResponse {

@@ -55,11 +55,75 @@ async function patchBlockBookingUrls(projectId: string, supabase: ReturnType<typ
   }
 }
 
+/**
+ * Convert a hero-split layout (text left, <img> right in grid) to a full-width
+ * background image layout (like hero-center). Preserves the text content.
+ */
+function convertSplitToBackground(html: string, imageUrl: string): string {
+  // Extract text content from the split layout
+  // Look for the h1 title
+  const titleMatch = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)
+  const title = titleMatch ? titleMatch[0] : ''
+
+  // Look for the subtitle (p tag after h1)
+  const subtitleMatch = html.match(/<h1[\s\S]*?<\/h1>\s*<p[^>]*>([\s\S]*?)<\/p>/)
+  const subtitle = subtitleMatch ? subtitleMatch[0].replace(titleMatch?.[0] || '', '').trim() : ''
+
+  // Look for tagline/label (small text above h1, often in a p or span with uppercase)
+  const taglineMatch = html.match(/<(?:p|span)[^>]*(?:tracking-wider|uppercase|text-sm|text-xs)[^>]*>([\s\S]*?)<\/(?:p|span)>/)
+  const tagline = taglineMatch ? taglineMatch[0] : ''
+
+  // Look for CTA button/link
+  const ctaMatch = html.match(/<a[^>]*class="[^"]*(?:rounded|btn|button|bg-)[^"]*"[^>]*>[\s\S]*?<\/a>/)
+  const cta = ctaMatch ? ctaMatch[0] : ''
+
+  // Rewrite the CTA colors: change theme-colored buttons to white for readability over image
+  let ctaFixed = cta
+  if (ctaFixed) {
+    // Replace theme bg colors with white bg + black text for contrast over image
+    ctaFixed = ctaFixed.replace(/bg-(?:indigo|blue|purple|violet|emerald|amber|rose|red|green|orange|yellow|cyan|teal|fuchsia|pink)-\d+/g, 'bg-white')
+    ctaFixed = ctaFixed.replace(/text-(?:white|black)/g, 'text-black')
+    // Ensure hover state works
+    ctaFixed = ctaFixed.replace(/hover:bg-(?:indigo|blue|purple|violet|emerald|amber|rose|red|green|orange|yellow|cyan|teal|fuchsia|pink)-\d+/g, 'hover:bg-gray-100')
+  }
+
+  // Fix text colors: change theme colors to white for readability over background image
+  let titleFixed = title
+    .replace(/text-(?:indigo|blue|purple|violet|emerald|amber|rose|red|green|orange|yellow|cyan|teal|fuchsia|pink)-\d+/g, 'text-white')
+    .replace(/text-(?:gray|slate|zinc|neutral|stone)-\d+/g, 'text-white')
+  // Ensure text is white
+  if (!titleFixed.includes('text-white')) {
+    titleFixed = titleFixed.replace(/<h1/, '<h1 style="color:white"')
+  }
+
+  let taglineFixed = tagline
+    .replace(/text-(?:indigo|blue|purple|violet|emerald|amber|rose|red|green|orange|yellow|cyan|teal|fuchsia|pink)-\d+/g, 'text-white/70')
+    .replace(/text-(?:gray|slate|zinc|neutral|stone)-\d+/g, 'text-white/70')
+
+  let subtitleFixed = subtitle
+    .replace(/text-(?:gray|slate|zinc|neutral|stone)-\d+/g, 'text-white/80')
+
+  // Build new hero HTML with background image
+  return `<section class="relative py-24 sm:py-32 overflow-hidden" style="background-image:url('${imageUrl}');background-size:cover;background-position:center">
+  <div class="absolute inset-0 bg-black/50"></div>
+  <div class="relative z-10 max-w-4xl mx-auto px-6 lg:px-8 text-center">
+    ${taglineFixed}
+    ${titleFixed}
+    ${subtitleFixed}
+    ${ctaFixed ? `<div class="mt-8 flex justify-center">${ctaFixed}</div>` : ''}
+  </div>
+</section>`
+}
+
 export async function handleMessage(
   message: string,
-  projectId: string
+  projectId: string,
+  imageUrls?: string[]
 ): Promise<AgentResponse> {
   const supabase = getSupabaseClient()
+  // Service role client for write operations that need to bypass RLS
+  // (anon key DELETE silently fails due to RLS requiring auth.uid())
+  const svcSupabase = getServiceSupabase()
 
   // Load current blocks and theme
   const { data: blocks } = await supabase
@@ -111,14 +175,18 @@ export async function handleMessage(
     }
   }
 
-  // Route the intent
-  const route = await routeIntent(message, currentBlocks, currentTheme)
+  // Route the intent (include image context so router knows user attached images)
+  const messageWithImageContext = imageUrls?.length
+    ? `${message}\n\n[User attached ${imageUrls.length} image(s)]`
+    : message
+  const route = await routeIntent(messageWithImageContext, currentBlocks, currentTheme)
 
   switch (route.intent) {
     case 'generate_site': {
       // Delete existing blocks and tools, then regenerate
-      await supabase.from('blocks').delete().eq('project_id', projectId)
-      await supabase.from('tools').delete().eq('project_id', projectId)
+      // Use service role to bypass RLS (anon key silently fails on DELETE)
+      await svcSupabase.from('blocks').delete().eq('project_id', projectId)
+      await svcSupabase.from('tools').delete().eq('project_id', projectId)
       const result = await generateSite(message, projectId)
       const blockTypes = result.blocks.map(b => b.block_type).join(', ')
 
@@ -185,8 +253,9 @@ export async function handleMessage(
       const config = await generateCloneConfig(extracted, visualAnalysis, projectId)
 
       // Step 5: Delete existing blocks and tools
-      await supabase.from('blocks').delete().eq('project_id', projectId)
-      await supabase.from('tools').delete().eq('project_id', projectId)
+      // Use service role to bypass RLS (anon key silently fails on DELETE)
+      await svcSupabase.from('blocks').delete().eq('project_id', projectId)
+      await svcSupabase.from('tools').delete().eq('project_id', projectId)
 
       // Step 6: Render, fetch images, split into blocks, store
       const result = await renderAndStoreBlocks(config, projectId)
@@ -276,7 +345,7 @@ export async function handleMessage(
         }
       }
 
-      await supabase.from('blocks').delete().eq('id', removeBlock.id)
+      await svcSupabase.from('blocks').delete().eq('id', removeBlock.id)
 
       return {
         action: 'removed',
@@ -293,6 +362,70 @@ export async function handleMessage(
 
     case 'change_image': {
       const imageTargetType = route.target_blocks[0] || 'hero'
+      const hasUserImages = imageUrls && imageUrls.length > 0
+
+      // If user says "change image" with no attachment and no clear description,
+      // ask if they have an image or want AI to pick
+      if (!hasUserImages && route.description?.includes('ask_user')) {
+        return {
+          action: 'clarify',
+          message: "Sure! Do you have an image you'd like to use, or should I find one for you?",
+          question: "Do you have an image to upload, or should I pick one?",
+        }
+      }
+
+      // For gallery batch replace with multiple user images
+      if (hasUserImages && imageTargetType === 'gallery') {
+        const galleryBlock = currentBlocks.find(b => b.block_type === 'gallery')
+        if (!galleryBlock) {
+          return {
+            action: 'clarify',
+            message: `I couldn't find a gallery section. Your site has: ${currentBlocks.map(b => b.block_type).join(', ')}`,
+            question: `Which section's images would you like to change?`,
+          }
+        }
+
+        let patchedHtml = galleryBlock.html
+        // Find all background-image URLs in the gallery
+        const bgImageRegex = /background-image:\s*url\(['"]?([^'")\s]+)['"]?\)/g
+        let matchIndex = 0
+        patchedHtml = patchedHtml.replace(bgImageRegex, (match) => {
+          if (matchIndex < imageUrls!.length) {
+            const url = imageUrls![matchIndex]
+            matchIndex++
+            return `background-image:url('${url}')`
+          }
+          return match // keep original if no more user images
+        })
+
+        // Also replace <img> src attributes
+        const imgSrcRegex = /src="(https?:\/\/[^"]*(?:unsplash|supabase)[^"]*)"/g
+        let srcIndex = 0
+        patchedHtml = patchedHtml.replace(imgSrcRegex, (match) => {
+          if (srcIndex < imageUrls!.length) {
+            const url = imageUrls![srcIndex]
+            srcIndex++
+            return `src="${url}"`
+          }
+          return match
+        })
+
+        if (patchedHtml !== galleryBlock.html) {
+          await supabase
+            .from('blocks')
+            .update({ html: patchedHtml, updated_at: new Date().toISOString() })
+            .eq('id', galleryBlock.id)
+
+          const used = Math.min(imageUrls!.length, Math.max(matchIndex, srcIndex))
+          const extra = imageUrls!.length - used
+          const note = extra > 0 ? ` (I used ${used} of your ${imageUrls!.length} images — the gallery has ${used} slots)` : ''
+          return {
+            action: 'edited',
+            message: `Done! I updated the gallery images with your photos.${note}`,
+          }
+        }
+      }
+
       const imageBlock = currentBlocks.find(b => b.block_type === imageTargetType)
 
       if (!imageBlock) {
@@ -303,39 +436,81 @@ export async function handleMessage(
         }
       }
 
-      // Use the router's description as the search query (what kind of image the user wants)
-      const searchQuery = route.description || message
-      const newImageUrl = await fetchSingleImage(searchQuery, 'landscape')
+      // Determine image URL: user-provided or Unsplash
+      let newImageUrl: string | null = null
+
+      if (hasUserImages) {
+        // Use the user's uploaded image directly
+        newImageUrl = imageUrls![0]
+      } else {
+        // Fetch from Unsplash
+        const searchQuery = route.description || message
+        newImageUrl = await fetchSingleImage(searchQuery, 'landscape')
+      }
 
       if (!newImageUrl) {
         return {
           action: 'clarify',
-          message: "I couldn't find a matching image. Could you describe the kind of image you'd like?",
+          message: "I couldn't find a matching image. Could you describe the kind of image you'd like, or attach one?",
           question: "What kind of image would you like?",
         }
       }
 
-      // Replace image URLs in the block HTML
-      let patchedHtml = imageBlock.html
-      // Replace background-image inline styles
-      patchedHtml = patchedHtml.replace(
-        /background-image:\s*url\(['"]?[^'")\s]+['"]?\)/g,
-        `background-image:url('${newImageUrl}')`
-      )
-      // Replace <img> src attributes (for hero-split)
-      patchedHtml = patchedHtml.replace(
-        /src="https:\/\/images\.unsplash\.com[^"]*"/g,
-        `src="${newImageUrl}"`
-      )
+      // Use LLM-determined image_placement (no keyword matching)
+      const wantsBackground = route.image_placement === 'background'
+      const isSplitLayout = imageBlock.html.includes('<img') && imageBlock.html.includes('grid')
 
-      // If no image was found to replace (block might use gradient), add one
-      if (patchedHtml === imageBlock.html && imageTargetType === 'hero') {
-        // For hero blocks without images, convert to image-backed hero
-        // Replace gradient background with image background
+      let patchedHtml = imageBlock.html
+
+      if (wantsBackground && imageTargetType === 'hero') {
+        if (isSplitLayout) {
+          // Convert hero-split (text left, img right) to full-width background
+          patchedHtml = convertSplitToBackground(imageBlock.html, newImageUrl)
+        } else if (imageBlock.html.includes('background-image')) {
+          // Already a background layout, just swap the URL
+          patchedHtml = patchedHtml.replace(
+            /background-image:\s*url\(['"]?[^'")\s]+['"]?\)/g,
+            `background-image:url('${newImageUrl}')`
+          )
+        } else {
+          // No image yet — add background-image to the section
+          patchedHtml = patchedHtml.replace(
+            /<section([^>]*)>/,
+            `<section$1 style="background-image:url('${newImageUrl}');background-size:cover;background-position:center">`
+          )
+          // Add overlay for readability if not present
+          if (!patchedHtml.includes('bg-black/')) {
+            patchedHtml = patchedHtml.replace(
+              /(<section[^>]*>)/,
+              `$1\n  <div class="absolute inset-0 bg-black/50"></div>`
+            )
+            // Make section relative and add overflow-hidden
+            patchedHtml = patchedHtml.replace(
+              /class="([^"]*)"/,
+              (match, classes) => `class="relative overflow-hidden ${classes}"`
+            )
+          }
+        }
+      } else {
+        // Standard in-place image replacement
+        // Replace background-image inline styles
         patchedHtml = patchedHtml.replace(
-          /background:linear-gradient\([^)]+\)/g,
-          `background-image:url('${newImageUrl}');background-size:cover;background-position:center`
+          /background-image:\s*url\(['"]?[^'")\s]+['"]?\)/g,
+          `background-image:url('${newImageUrl}')`
         )
+        // Replace <img> src attributes
+        patchedHtml = patchedHtml.replace(
+          /src="https?:\/\/[^"]*(?:unsplash|supabase)[^"]*"/g,
+          `src="${newImageUrl}"`
+        )
+
+        // If no image was found to replace (block might use gradient), add one
+        if (patchedHtml === imageBlock.html && imageTargetType === 'hero') {
+          patchedHtml = patchedHtml.replace(
+            /background:linear-gradient\([^)]+\)/g,
+            `background-image:url('${newImageUrl}');background-size:cover;background-position:center`
+          )
+        }
       }
 
       if (patchedHtml !== imageBlock.html) {
@@ -344,9 +519,10 @@ export async function handleMessage(
           .update({ html: patchedHtml, updated_at: new Date().toISOString() })
           .eq('id', imageBlock.id)
 
+        const source = hasUserImages ? 'your uploaded image' : 'a new image'
         return {
           action: 'edited',
-          message: `Done! I updated the ${imageTargetType} image.`,
+          message: `Done! I updated the ${imageTargetType} image with ${source}.`,
         }
       }
 

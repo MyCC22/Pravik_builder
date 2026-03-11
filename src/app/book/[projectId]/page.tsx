@@ -30,13 +30,17 @@ export default async function BookPage({
     )
   }
 
-  // Load tool
-  const { data: tool, error: toolError } = await supabase
+  // Load tool — use limit(1) + order to get the latest one
+  // (.single() errors when duplicate tools exist from clone + regenerate)
+  const { data: tools, error: toolError } = await supabase
     .from('tools')
     .select('id, config, is_active')
     .eq('project_id', projectId)
     .eq('tool_type', 'booking')
-    .single()
+    .order('created_at', { ascending: false })
+    .limit(1)
+
+  const tool = tools?.[0] || null
 
   if (toolError || !tool) {
     return (
