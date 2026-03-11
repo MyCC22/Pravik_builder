@@ -35,10 +35,4 @@ export function renderTemplate(config: TemplateConfig): string {
 </html>`
 }
 
-export function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
+export { escapeHtml } from './utils'
