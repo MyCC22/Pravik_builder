@@ -40,7 +40,7 @@ Universal (required for all templates):
 - "tagline": Short tagline (used in CTA sections)
 - "heroTitle": Main hero heading
 - "heroSubtitle": Hero supporting text (1-2 sentences)
-- "heroImageQuery": A 1-3 word search term for the hero background photo (e.g., "soccer coaching", "italian restaurant", "modern office", "yoga class"). Be specific to the business type.
+- "heroImageQuery": A 2-4 word Unsplash search term for the hero background photo. MUST include the specific industry/activity — NOT generic business words. Examples: "soccer training field", "italian pasta restaurant", "yoga outdoor class", "dental clinic office", "martial arts dojo", "hair salon styling". BAD examples: "coaching mentoring growth", "professional business team", "success leadership". The image should visually represent what the business DOES.
 - "businessCategory": One of these 40 categories that best matches the business: "yoga", "fitness", "spa", "salon", "restaurant", "cafe", "bakery", "bar", "dental", "medical", "veterinary", "real-estate", "law", "accounting", "insurance", "plumbing", "electrician", "landscaping", "auto-repair", "construction", "cleaning", "moving", "photography", "videography", "music", "dance", "art", "education", "martial-arts", "tech", "marketing", "web-design", "consulting", "coaching", "wedding", "event", "catering", "florist", "fashion", "interior-design". Pick the closest match.
 - "ctaText": Primary call-to-action button text (e.g., "Get Started", "Book Now")
 - "ctaUrl": CTA link (default: "#contact")

@@ -86,6 +86,18 @@ export default function BuilderPage() {
     }
   }, [isVoiceCall, projectId, previewUrl])
 
+  // Poll for preview updates during active voice calls
+  // Realtime broadcast can be unreliable — polling is the reliable fallback
+  useEffect(() => {
+    if (!isVoiceCall || !callActive || !projectId) return
+
+    const interval = setInterval(() => {
+      setPreviewUrl(`/api/builder/preview/${projectId}?t=${Date.now()}`)
+    }, 4000)
+
+    return () => clearInterval(interval)
+  }, [isVoiceCall, callActive, projectId])
+
   const handleSend = useCallback(
     async (message: string, images?: File[]) => {
       if (!projectId) return

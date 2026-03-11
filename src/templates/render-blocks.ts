@@ -18,6 +18,15 @@ export async function renderFromBlocks(projectId: string): Promise<string | null
 
   if (blocksError || !blocks || blocks.length === 0) return null
 
+  // Deduplicate: if multiple blocks share the same position (race condition),
+  // keep only the first one at each position
+  const seen = new Set<number>()
+  const uniqueBlocks = blocks.filter(b => {
+    if (seen.has(b.position)) return false
+    seen.add(b.position)
+    return true
+  })
+
   const { data: project } = await supabase
     .from('projects')
     .select('theme, name')
@@ -26,7 +35,7 @@ export async function renderFromBlocks(projectId: string): Promise<string | null
 
   const themeId = project?.theme || 'clean'
   const siteName = project?.name || 'Website'
-  const bodyHtml = blocks.map(b => b.html).join('\n')
+  const bodyHtml = uniqueBlocks.map(b => b.html).join('\n')
 
   // Detect old inline-style blocks vs new Tailwind blocks
   const firstContentBlock = blocks.find(b => !b.html.trim().startsWith('<nav'))

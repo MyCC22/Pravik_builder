@@ -155,6 +155,9 @@ export async function handleMessage(
 
   // If no blocks exist AND no URL present, skip router and generate directly
   if (currentBlocks.length === 0 && !hasUrl) {
+    // Defensive delete: race condition can cause concurrent requests to all
+    // see 0 blocks and generate simultaneously, creating duplicates
+    await svcSupabase.from('blocks').delete().eq('project_id', projectId)
     const result = await generateSite(message, projectId)
     const blockTypes = result.blocks.map(b => b.block_type).join(', ')
 
