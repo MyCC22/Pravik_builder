@@ -5,6 +5,8 @@ export type AgentIntent =
   | 'remove_block'
   | 'reorder_blocks'
   | 'change_theme'
+  | 'edit_tool'
+  | 'add_tool'
   | 'clarify'
 
 export interface RouterResult {
@@ -16,7 +18,7 @@ export interface RouterResult {
 }
 
 export interface AgentResponse {
-  action: 'generated' | 'edited' | 'theme_changed' | 'removed' | 'reordered' | 'clarify'
+  action: 'generated' | 'edited' | 'theme_changed' | 'removed' | 'reordered' | 'tool_created' | 'tool_edited' | 'clarify'
   message: string
   question?: string
 }
@@ -27,4 +29,24 @@ export interface Block {
   block_type: string
   html: string
   position: number
+}
+
+export type ToolFieldType = 'text' | 'email' | 'phone' | 'textarea' | 'number' | 'dropdown'
+
+export interface ToolField {
+  name: string
+  label: string
+  type: ToolFieldType
+  required: boolean
+  placeholder?: string
+  options?: string[]
+}
+
+export interface ToolConfig {
+  title: string
+  subtitle: string
+  submitText: string
+  successMessage: string
+  trustSignals: string[]
+  fields: ToolField[]
 }
