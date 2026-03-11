@@ -52,3 +52,20 @@ export interface CallSession {
   ended_at: string | null
   created_at: string
 }
+
+export interface Tool {
+  id: string
+  project_id: string
+  tool_type: string
+  config: Record<string, unknown>
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ToolSubmission {
+  id: string
+  tool_id: string
+  data: Record<string, string>
+  submitted_at: string
+}
