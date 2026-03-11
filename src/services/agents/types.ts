@@ -5,8 +5,10 @@ export type AgentIntent =
   | 'remove_block'
   | 'reorder_blocks'
   | 'change_theme'
+  | 'change_image'
   | 'edit_tool'
   | 'add_tool'
+  | 'clone_site'
   | 'clarify'
 
 export interface RouterResult {
@@ -15,6 +17,8 @@ export interface RouterResult {
   description: string
   question?: string
   position?: number
+  clone_mode?: 'content' | 'content_and_style'
+  clone_url?: string
 }
 
 export interface AgentResponse {
