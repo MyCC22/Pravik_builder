@@ -20,7 +20,7 @@ export async function editBlock(
   const systemPrompt = getBlockEditorPrompt(block.block_type, block.html, allBlockTypes)
 
   const response = await getClient().messages.create({
-    model: 'claude-sonnet-4-5-20241022',
+    model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     system: systemPrompt,
     messages: [{ role: 'user', content: message }],
@@ -41,7 +41,7 @@ export async function addBlock(
   const systemPrompt = getAddBlockPrompt(blockType, allBlockTypes)
 
   const response = await getClient().messages.create({
-    model: 'claude-sonnet-4-5-20241022',
+    model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     system: systemPrompt,
     messages: [{ role: 'user', content: message }],
