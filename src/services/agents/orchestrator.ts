@@ -1,9 +1,19 @@
 import { getSupabaseClient } from '@/services/supabase/client'
+import { createClient } from '@supabase/supabase-js'
 import { routeIntent } from './router'
 import { generateSite } from './generator'
 import { editBlock, addBlock } from './block-editor'
 import { pickTheme } from './theme-agent'
-import type { Block, AgentResponse } from './types'
+import { generateBookingTool } from './tool-generator'
+import { editToolConfig } from './tool-editor'
+import type { Block, AgentResponse, ToolConfig } from './types'
+
+function getServiceSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function handleMessage(
   message: string,
@@ -31,9 +41,24 @@ export async function handleMessage(
   if (currentBlocks.length === 0) {
     const result = await generateSite(message, projectId)
     const blockTypes = result.blocks.map(b => b.block_type).join(', ')
+
+    // Auto-generate booking tool
+    const templateType = result.config.template || 'landing'
+    const toolConfig = await generateBookingTool(message, projectId, templateType)
+
+    if (toolConfig) {
+      // Wire CTA buttons to booking page
+      const updatedContent = { ...result.config.content, bookingUrl: `/book/${projectId}`, bookingText: toolConfig.submitText }
+      const updatedConfig = { ...result.config, content: updatedContent }
+      await supabase
+        .from('projects')
+        .update({ template_config: updatedConfig, updated_at: new Date().toISOString() })
+        .eq('id', projectId)
+    }
+
     return {
       action: 'generated',
-      message: `Your website is ready! I created sections: ${blockTypes} with the ${result.theme} theme.`,
+      message: `Your website is ready! I created sections: ${blockTypes} with the ${result.theme} theme.${toolConfig ? ` A booking form is live at /book/${projectId}` : ''}`,
     }
   }
 
@@ -42,13 +67,28 @@ export async function handleMessage(
 
   switch (route.intent) {
     case 'generate_site': {
-      // Delete existing blocks, then regenerate
+      // Delete existing blocks and tools, then regenerate
       await supabase.from('blocks').delete().eq('project_id', projectId)
+      await supabase.from('tools').delete().eq('project_id', projectId)
       const result = await generateSite(message, projectId)
       const blockTypes = result.blocks.map(b => b.block_type).join(', ')
+
+      // Auto-generate booking tool
+      const templateType = result.config.template || 'landing'
+      const toolConfig = await generateBookingTool(message, projectId, templateType)
+
+      if (toolConfig) {
+        const updatedContent = { ...result.config.content, bookingUrl: `/book/${projectId}`, bookingText: toolConfig.submitText }
+        const updatedConfig = { ...result.config, content: updatedContent }
+        await supabase
+          .from('projects')
+          .update({ template_config: updatedConfig, updated_at: new Date().toISOString() })
+          .eq('id', projectId)
+      }
+
       return {
         action: 'generated',
-        message: `Rebuilt your website! Sections: ${blockTypes} with the ${result.theme} theme.`,
+        message: `Rebuilt your website! Sections: ${blockTypes} with the ${result.theme} theme.${toolConfig ? ` Booking form updated at /book/${projectId}` : ''}`,
       }
     }
 
@@ -129,6 +169,97 @@ export async function handleMessage(
       return {
         action: 'theme_changed',
         message: `Done! Switched to the ${themeResult.theme} theme — ${themeResult.description}`,
+      }
+    }
+
+    case 'edit_tool': {
+      const svc = getServiceSupabase()
+
+      // Load existing tool for this project
+      const { data: tool } = await svc
+        .from('tools')
+        .select('*')
+        .eq('project_id', projectId)
+        .eq('tool_type', 'booking')
+        .single()
+
+      if (!tool) {
+        return {
+          action: 'clarify',
+          message: "You don't have a booking form yet. Would you like me to create one?",
+          question: "Would you like me to create a booking form?",
+        }
+      }
+
+      const updatedConfig = await editToolConfig(tool.config as ToolConfig, message)
+
+      await svc
+        .from('tools')
+        .update({ config: updatedConfig, updated_at: new Date().toISOString() })
+        .eq('id', tool.id)
+
+      return {
+        action: 'tool_edited',
+        message: `Done! I updated your booking form. View it at /book/${projectId}`,
+      }
+    }
+
+    case 'add_tool': {
+      const svc = getServiceSupabase()
+
+      // Check if tool already exists
+      const { data: existingTool } = await svc
+        .from('tools')
+        .select('id')
+        .eq('project_id', projectId)
+        .eq('tool_type', 'booking')
+        .single()
+
+      if (existingTool) {
+        return {
+          action: 'clarify',
+          message: "You already have a booking form. Would you like to edit it instead?",
+          question: "You already have a booking form. Would you like to edit it?",
+        }
+      }
+
+      // Get project name for context
+      const { data: proj } = await supabase
+        .from('projects')
+        .select('name, template_config')
+        .eq('id', projectId)
+        .single()
+
+      const templateType = (proj?.template_config as Record<string, unknown>)?.template as string || 'landing'
+      const businessContext = proj?.name || message
+
+      const toolConfig = await generateBookingTool(businessContext, projectId, templateType)
+
+      if (!toolConfig) {
+        return {
+          action: 'clarify',
+          message: "I had trouble creating the booking form. Could you describe your business so I can try again?",
+          question: "Could you describe your business?",
+        }
+      }
+
+      // Update project template_config with bookingUrl
+      if (proj?.template_config) {
+        const config = proj.template_config as Record<string, unknown>
+        const content = (config.content || {}) as Record<string, unknown>
+        content.bookingUrl = `/book/${projectId}`
+        content.bookingText = toolConfig.submitText
+        config.content = content
+
+        await supabase
+          .from('projects')
+          .update({ template_config: config, updated_at: new Date().toISOString() })
+          .eq('id', projectId)
+      }
+
+      return {
+        action: 'tool_created',
+        message: `Done! I created a booking form for your site. View it at /book/${projectId}`,
       }
     }
 
