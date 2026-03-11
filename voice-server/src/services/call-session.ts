@@ -1,5 +1,6 @@
 import { getSupabaseClient } from './supabase.js'
-import type { CallState } from '../agents/types.js'
+
+export type CallState = 'greeting' | 'onboarding' | 'waiting_for_page' | 'building' | 'follow_up' | 'ended'
 
 export interface CallSessionRow {
   id: string

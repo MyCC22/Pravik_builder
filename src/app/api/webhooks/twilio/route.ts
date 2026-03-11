@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/services/supabase/client'
-import { verifyWebhookSignature, generateTwiML, generateConversationRelayTwiML } from '@/services/twilio/client'
+import { verifyWebhookSignature, generateTwiML, generateMediaStreamTwiML } from '@/services/twilio/client'
 
 function getBaseUrl(req: NextRequest): string {
   const host = req.headers.get('host') || 'pravik-builder.vercel.app'
@@ -82,11 +82,11 @@ export async function POST(req: NextRequest) {
 
     if (projectError) throw projectError
 
-    // Voice server WebSocket URL
-    const voiceServerUrl = process.env.VOICE_SERVER_WS_URL || 'wss://pravik-voice-server.up.railway.app/call'
+    // Voice server WebSocket URL (Media Streams endpoint)
+    const voiceServerUrl = process.env.VOICE_SERVER_WS_URL || 'wss://pravik-voice-server.up.railway.app/media-stream'
 
-    // Return ConversationRelay TwiML — hands the call to the voice server
-    const twiml = generateConversationRelayTwiML({
+    // Return Media Stream TwiML — connects call audio to voice server → OpenAI Realtime
+    const twiml = generateMediaStreamTwiML({
       websocketUrl: voiceServerUrl,
       callSid,
       projectId: project.id,

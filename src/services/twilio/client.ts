@@ -47,7 +47,7 @@ export function generateTwiML(message: string, smsBody?: string, smsTo?: string)
   return twiml
 }
 
-export function generateConversationRelayTwiML(params: {
+export function generateMediaStreamTwiML(params: {
   websocketUrl: string
   callSid: string
   projectId: string
@@ -58,22 +58,13 @@ export function generateConversationRelayTwiML(params: {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Connect>
-    <ConversationRelay
-      url="${escapeXml(params.websocketUrl)}"
-      welcomeGreeting=""
-      ttsProvider="google"
-      voice="en-US-Studio-O"
-      transcriptionProvider="deepgram"
-      language="en-US"
-      interruptible="true"
-      dtmfDetection="true"
-    >
+    <Stream url="${escapeXml(params.websocketUrl)}">
       <Parameter name="callSid" value="${escapeXml(params.callSid)}" />
       <Parameter name="projectId" value="${escapeXml(params.projectId)}" />
       <Parameter name="userId" value="${escapeXml(params.userId)}" />
       <Parameter name="isNewUser" value="${params.isNewUser ? 'true' : 'false'}" />
       <Parameter name="phoneNumber" value="${escapeXml(params.phoneNumber)}" />
-    </ConversationRelay>
+    </Stream>
   </Connect>
 </Response>`
 }
