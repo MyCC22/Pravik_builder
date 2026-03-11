@@ -77,8 +77,15 @@ export async function handleMessage(
   const currentBlocks: Block[] = (blocks as Block[]) || []
   const currentTheme = project?.theme || null
 
-  // If no blocks exist, skip router and generate directly
-  if (currentBlocks.length === 0) {
+  // Detect clone URLs early — clone requests must go through the router
+  // even for new projects with no blocks (otherwise they get routed to
+  // the generic generateSite which invents content)
+  const hasUrl = /https?:\/\/[^\s]+/.test(message)
+  const hasCloneKeywords = /\b(clone|copy|recreate|replicate|like this|make .* like|website like|similar to)\b/i.test(message)
+  const isLikelyClone = hasUrl && hasCloneKeywords
+
+  // If no blocks exist AND not a clone request, skip router and generate directly
+  if (currentBlocks.length === 0 && !isLikelyClone) {
     const result = await generateSite(message, projectId)
     const blockTypes = result.blocks.map(b => b.block_type).join(', ')
 
