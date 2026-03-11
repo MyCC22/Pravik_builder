@@ -15,9 +15,10 @@ function getClient(): Anthropic {
 export async function editBlock(
   block: Block,
   message: string,
-  allBlockTypes: string[]
+  allBlockTypes: string[],
+  projectId?: string
 ): Promise<string> {
-  const systemPrompt = getBlockEditorPrompt(block.block_type, block.html, allBlockTypes)
+  const systemPrompt = getBlockEditorPrompt(block.block_type, block.html, allBlockTypes, projectId)
 
   const response = await getClient().messages.create({
     model: 'claude-sonnet-4-6',

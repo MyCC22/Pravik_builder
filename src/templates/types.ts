@@ -34,6 +34,7 @@ export interface Feature {
 export interface GalleryItem {
   title: string
   category: string
+  imageUrl?: string
 }
 
 export interface Testimonial {
@@ -130,6 +131,11 @@ export interface TemplateContent {
   ctaText?: string
   ctaUrl?: string
   footerLinks?: NavLink[]
+
+  // Images
+  heroImageUrl?: string
+  heroImageQuery?: string
+  businessCategory?: string
 
   // Landing
   features?: Feature[]

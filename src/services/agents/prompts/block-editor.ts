@@ -31,8 +31,17 @@ function detectStylingSystem(html: string): 'tailwind' | 'legacy' {
   return 'legacy'
 }
 
-export function getBlockEditorPrompt(blockType: string, currentHtml: string, allBlockTypes: string[]): string {
+export function getBlockEditorPrompt(blockType: string, currentHtml: string, allBlockTypes: string[], projectId?: string): string {
   const system = detectStylingSystem(currentHtml)
+  const bookingUrl = projectId ? `/book/${projectId}` : null
+
+  const bookingContext = bookingUrl
+    ? `\nBooking/CTA context:
+- This site has a booking form at "${bookingUrl}"
+- If the user asks to "connect", "link", or "wire" a button to the booking form, update the button's href to "${bookingUrl}"
+- If there are CTA buttons pointing to "#contact" or "#booking", update them to point to "${bookingUrl}"
+- When the user mentions "booking", "form", "CTA link", or "button link" in the context of editing this block, update the relevant href to "${bookingUrl}"`
+    : ''
 
   if (system === 'tailwind') {
     return `You are a website HTML block editor. You will receive the current HTML of a "${blockType}" block and the user's requested changes. Return the updated HTML.
@@ -41,6 +50,7 @@ Current block HTML:
 ${currentHtml}
 
 Other blocks on this page: ${allBlockTypes.join(', ')}
+${bookingContext}
 
 ${TAILWIND_SECTION_TYPES}
 
@@ -64,6 +74,7 @@ Current block HTML:
 ${currentHtml}
 
 Other blocks on this page: ${allBlockTypes.join(', ')}
+${bookingContext}
 
 Rules:
 1. Return ONLY the updated HTML — no explanation, no markdown fences, no wrapping tags

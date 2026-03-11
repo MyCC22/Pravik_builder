@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { handleMessage } from '@/services/agents/orchestrator'
 import { getSupabaseClient } from '@/services/supabase/client'
 
-export const maxDuration = 30
+export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
   try {

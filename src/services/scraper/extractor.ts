@@ -12,10 +12,12 @@ export interface ExtractedContent {
   faq?: { question: string; answer: string }[]
   pricing?: { plan: string; price: string; features: string[] }[]
   menuItems?: { category: string; items: { name: string; price: string; description?: string }[] }[]
+  galleryItems?: { title: string; category?: string }[]
   email?: string
   phone?: string
   address?: string
   hours?: { day: string; hours: string }[]
+  hasGallery: boolean
   rawMarkdown: string
 }
 
@@ -399,6 +401,43 @@ function extractHeroSubtitle(markdown: string): string | undefined {
 }
 
 // ---------------------------------------------------------------------------
+// Gallery extraction
+// ---------------------------------------------------------------------------
+
+function extractGallery(
+  markdown: string
+): { items: { title: string; category?: string }[] | undefined; hasGallery: boolean } {
+  // Look for clusters of markdown images: ![alt text](url)
+  const imageRegex = /!\[([^\]]+)\]\([^)]+\)/g
+  const allImages: string[] = []
+  let imgMatch: RegExpExecArray | null
+  while ((imgMatch = imageRegex.exec(markdown)) !== null) {
+    const alt = imgMatch[1].trim()
+    if (alt && alt.length > 3) {
+      allImages.push(alt)
+    }
+  }
+
+  // If there are 3+ images, consider it a gallery
+  if (allImages.length >= 3) {
+    // Deduplicate alt texts (some sites repeat images)
+    const seen = new Set<string>()
+    const unique = allImages.filter((alt) => {
+      if (seen.has(alt)) return false
+      seen.add(alt)
+      return true
+    })
+
+    return {
+      hasGallery: true,
+      items: unique.slice(0, 8).map((alt) => ({ title: alt })),
+    }
+  }
+
+  return { hasGallery: false, items: undefined }
+}
+
+// ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
 
@@ -422,9 +461,10 @@ export function extractContent(crawl: CrawlResult): ExtractedContent {
   const heroTitle = extractHeroTitle(mainPage.markdown)
   const heroSubtitle = extractHeroSubtitle(mainPage.markdown)
 
-  // rawMarkdown: join all pages, truncate to ~6000 chars
+  // rawMarkdown: join all pages (no truncation — typical pages are well under 20K chars
+  // and the AI needs the full content to avoid inventing things)
   const allMarkdown = pages.map((p) => p.markdown).join('\n\n---\n\n')
-  const rawMarkdown = allMarkdown.length > 6000 ? allMarkdown.slice(0, 6000) : allMarkdown
+  const rawMarkdown = allMarkdown
 
   // contact info (search all pages combined)
   const email = extractEmail(allMarkdown)
@@ -441,6 +481,11 @@ export function extractContent(crawl: CrawlResult): ExtractedContent {
   const menuItems = extractMenu(allMarkdown)
   const hours = extractHours(allMarkdown)
 
+  // Gallery detection: look for clusters of images (3+ images with alt text)
+  const galleryResult = extractGallery(allMarkdown)
+  const galleryItems = galleryResult.items
+  const hasGallery = galleryResult.hasGallery
+
   return {
     siteName,
     tagline,
@@ -453,10 +498,12 @@ export function extractContent(crawl: CrawlResult): ExtractedContent {
     faq,
     pricing,
     menuItems,
+    galleryItems,
     email,
     phone,
     address,
     hours,
+    hasGallery,
     rawMarkdown,
   }
 }

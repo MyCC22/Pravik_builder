@@ -21,7 +21,7 @@ export function renderRestaurant(config: TemplateConfig): string {
 
   const sections: string[] = [
     renderNavbar(content.siteName, links, t),
-    renderHeroSplit(content.heroTitle, content.heroSubtitle, t, content.tagline, content.ctaText, content.ctaUrl),
+    renderHeroSplit(content.heroTitle, content.heroSubtitle, t, content.tagline, content.ctaText, content.ctaUrl, content.heroImageUrl),
   ]
 
   if (content.menuItems?.length) sections.push(renderMenuDisplay(content.menuItems, t))

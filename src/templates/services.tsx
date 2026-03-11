@@ -23,7 +23,7 @@ export function renderServices(config: TemplateConfig): string {
 
   const sections: string[] = [
     renderNavbar(content.siteName, links, t),
-    renderHeroCenter(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl),
+    renderHeroCenter(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl, content.heroImageUrl),
   ]
 
   if (content.services?.length) sections.push(renderServiceCards(content.services, t))

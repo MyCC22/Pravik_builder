@@ -40,6 +40,8 @@ Universal (required for all templates):
 - "tagline": Short tagline (used in CTA sections)
 - "heroTitle": Main hero heading
 - "heroSubtitle": Hero supporting text (1-2 sentences)
+- "heroImageQuery": A 1-3 word search term for the hero background photo (e.g., "soccer coaching", "italian restaurant", "modern office", "yoga class"). Be specific to the business type.
+- "businessCategory": One of these 40 categories that best matches the business: "yoga", "fitness", "spa", "salon", "restaurant", "cafe", "bakery", "bar", "dental", "medical", "veterinary", "real-estate", "law", "accounting", "insurance", "plumbing", "electrician", "landscaping", "auto-repair", "construction", "cleaning", "moving", "photography", "videography", "music", "dance", "art", "education", "martial-arts", "tech", "marketing", "web-design", "consulting", "coaching", "wedding", "event", "catering", "florist", "fashion", "interior-design". Pick the closest match.
 - "ctaText": Primary call-to-action button text (e.g., "Get Started", "Book Now")
 - "ctaUrl": CTA link (default: "#contact")
 - "footerLinks": [{"label": "Section", "href": "#section"}] — 3-5 nav links
@@ -86,7 +88,21 @@ Event templates:
 - "faq": same as services
 `
 
-export function getGeneratorPrompt(): string {
+export function getTemplateDescriptions(): string {
+  return TEMPLATE_DESCRIPTIONS
+}
+
+export function getThemeDescriptions(): string {
+  return THEME_DESCRIPTIONS
+}
+
+export function getContentSchema(): string {
+  return CONTENT_SCHEMA
+}
+
+export function getGeneratorPrompt(projectId?: string): string {
+  const bookingUrl = projectId ? `/book/${projectId}` : '#contact'
+
   return `You are a website generator. Given a user's description, pick the best template and theme, then generate all content fields as a complete TemplateConfig JSON object.
 
 ${TEMPLATE_DESCRIPTIONS}
@@ -114,6 +130,8 @@ Rules:
 - Include all content fields relevant to the chosen template
 - Template IDs: ${JSON.stringify(TEMPLATE_IDS)}
 - Theme IDs: ${JSON.stringify(THEME_IDS)}
+- IMPORTANT: For ALL CTA buttons, booking buttons, and call-to-action links, use "${bookingUrl}" as the URL. Set "ctaUrl" to "${bookingUrl}" and "bookingUrl" to "${bookingUrl}". This links them to the booking/lead capture form.
+- Never use "#contact" for ctaUrl or bookingUrl — always use "${bookingUrl}"
 
 Return format:
 {

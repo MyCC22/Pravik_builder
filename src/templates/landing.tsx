@@ -20,7 +20,7 @@ export function renderLanding(config: TemplateConfig): string {
 
   const sections: string[] = [
     renderNavbar(content.siteName, links, t),
-    renderHeroCenter(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl),
+    renderHeroCenter(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl, content.heroImageUrl),
   ]
 
   if (content.features?.length) sections.push(renderFeaturesGrid(content.features, t))
