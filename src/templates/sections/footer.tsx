@@ -1,16 +1,20 @@
 import type { NavLink } from '../types'
-import { escapeHtml } from '../render'
+import type { ThemeClasses } from '../theme-classes'
+import { escapeHtml } from '../utils'
 
-export function renderFooter(siteName: string, links: NavLink[] = [], copyright?: string): string {
+export function renderFooter(siteName: string, links: NavLink[], t: ThemeClasses, copyright?: string): string {
   const linksHtml = links.length > 0
-    ? `<div style="display:flex;justify-content:center;gap:2rem;margin-bottom:1.5rem;flex-wrap:wrap">${links.map((l) => `<a href="${l.href}" style="color:var(--muted);font-size:0.875rem;font-weight:500;transition:color 0.15s">${escapeHtml(l.label)}</a>`).join('')}</div>`
+    ? `<div class="flex justify-center gap-8 flex-wrap mb-8">
+        ${links.map(l => `<a href="${l.href}" class="${t.textMuted} ${t.accentHover} text-sm transition-colors">${escapeHtml(l.label)}</a>`).join('')}
+      </div>`
     : ''
-  const copyrightText = copyright || `\u00A9 ${new Date().getFullYear()} ${escapeHtml(siteName)}. All rights reserved.`
+  const year = new Date().getFullYear()
+  const copyrightText = copyright || `&copy; ${year} ${escapeHtml(siteName)}. All rights reserved.`
 
-  return `<footer>
-    <div style="max-width:1200px;margin:0 auto;text-align:center">
-      ${linksHtml}
-      <p style="font-size:0.8125rem;color:var(--muted)">${copyrightText}</p>
-    </div>
-  </footer>`
+  return `<footer class="border-t ${t.borderColor} py-12">
+  <div class="max-w-7xl mx-auto px-6 lg:px-8 text-center">
+    ${linksHtml}
+    <p class="text-sm ${t.textMuted}">${copyrightText}</p>
+  </div>
+</footer>`
 }

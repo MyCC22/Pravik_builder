@@ -1,22 +1,23 @@
 import type { Feature } from '../types'
-import { escapeHtml } from '../render'
+import type { ThemeClasses } from '../theme-classes'
+import { escapeHtml } from '../utils'
 
-export function renderFeaturesGrid(features: Feature[]): string {
-  const cards = features
-    .map(
-      (f) => `<div style="background:var(--surface);border:1px solid var(--border);border-radius:0.75rem;padding:2rem;transition:box-shadow 0.2s">
-      <div style="width:2.5rem;height:2.5rem;display:flex;align-items:center;justify-content:center;border-radius:0.5rem;background:var(--accent);color:var(--accent-text);font-size:1.25rem;margin-bottom:1rem">${f.icon}</div>
-      <h3 style="font-size:1.0625rem;font-weight:600;color:var(--text);margin-bottom:0.5rem">${escapeHtml(f.title)}</h3>
-      <p style="font-size:0.875rem;color:var(--muted);line-height:1.7">${escapeHtml(f.description)}</p>
+export function renderFeaturesGrid(features: Feature[], t: ThemeClasses): string {
+  const cards = features.map(f =>
+    `<div class="${t.surface} ${t.border} rounded-2xl p-8 transition-all duration-200 hover:shadow-lg">
+      <div class="flex items-center justify-center w-12 h-12 ${t.accentBg} ${t.accentText} rounded-xl text-xl mb-5">${f.icon}</div>
+      <h3 class="text-lg font-semibold ${t.text}">${escapeHtml(f.title)}</h3>
+      <p class="mt-2 text-sm leading-6 ${t.textMuted}">${escapeHtml(f.description)}</p>
     </div>`
-    )
-    .join('')
+  ).join('')
 
-  return `<section id="features" style="max-width:1100px;margin:0 auto">
-    <div style="text-align:center;margin-bottom:3rem">
-      <h2 style="font-size:clamp(1.75rem,3vw,2.25rem);font-weight:700;color:var(--text);letter-spacing:-0.025em">Everything you need</h2>
-      <p style="margin-top:0.75rem;font-size:1.0625rem;color:var(--muted);max-width:560px;margin-left:auto;margin-right:auto">Built with the tools and features your business needs to succeed.</p>
+  return `<section id="features" class="py-24 sm:py-32">
+  <div class="max-w-7xl mx-auto px-6 lg:px-8">
+    <div class="max-w-2xl mx-auto text-center mb-16">
+      <h2 class="text-3xl font-bold tracking-tight ${t.text} sm:text-4xl">Everything you need</h2>
+      <p class="mt-4 text-lg leading-8 ${t.textMuted}">Built with the tools and features your business needs to succeed.</p>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem">${cards}</div>
-  </section>`
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">${cards}</div>
+  </div>
+</section>`
 }

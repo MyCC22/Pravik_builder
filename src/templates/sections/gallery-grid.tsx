@@ -1,20 +1,26 @@
 import type { GalleryItem } from '../types'
-import { escapeHtml } from '../render'
+import type { ThemeClasses } from '../theme-classes'
+import { escapeHtml } from '../utils'
 
-export function renderGalleryGrid(items: GalleryItem[]): string {
+export function renderGalleryGrid(items: GalleryItem[], t: ThemeClasses): string {
   const cards = items.map((item, i) => {
-    const hues = [210, 260, 180, 330, 40, 150, 290, 20]
-    const hue = hues[i % hues.length]
-    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:0.75rem;overflow:hidden;transition:box-shadow 0.2s">
-      <div style="height:12rem;background:linear-gradient(135deg,hsl(${hue},40%,85%),hsl(${hue + 30},35%,75%))"></div>
-      <div style="padding:1.25rem">
-        <h3 style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:0.25rem">${escapeHtml(item.title)}</h3>
-        <p style="font-size:0.8125rem;color:var(--muted)">${escapeHtml(item.category)}</p>
+    const hue = (i * 47 + 200) % 360
+    return `<div class="group relative overflow-hidden rounded-2xl ${t.border}">
+      <div class="aspect-[4/3]" style="background:linear-gradient(135deg, hsl(${hue},40%,85%), hsl(${(hue+40)%360},50%,75%))"></div>
+      <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+      <div class="absolute bottom-0 left-0 right-0 p-6 translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300">
+        <p class="text-white font-semibold">${escapeHtml(item.title)}</p>
+        <p class="text-white/70 text-sm">${escapeHtml(item.category)}</p>
       </div>
     </div>`
   }).join('')
 
-  return `<section style="max-width:1100px;margin:0 auto">
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem">${cards}</div>
-  </section>`
+  return `<section class="py-24 sm:py-32">
+  <div class="max-w-7xl mx-auto px-6 lg:px-8">
+    <div class="max-w-2xl mx-auto text-center mb-16">
+      <h2 class="text-3xl font-bold tracking-tight ${t.text} sm:text-4xl">Our work</h2>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">${cards}</div>
+  </div>
+</section>`
 }

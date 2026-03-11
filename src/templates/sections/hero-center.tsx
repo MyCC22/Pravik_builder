@@ -1,16 +1,19 @@
-import { escapeHtml } from '../render'
+import type { ThemeClasses } from '../theme-classes'
+import { escapeHtml } from '../utils'
 
-export function renderHeroCenter(title: string, subtitle: string, ctaText?: string, ctaUrl = '#contact'): string {
+export function renderHeroCenter(title: string, subtitle: string, t: ThemeClasses, ctaText?: string, ctaUrl = '#contact'): string {
   const ctaHtml = ctaText
-    ? `<div style="margin-top:2.5rem;display:flex;justify-content:center;gap:1rem;flex-wrap:wrap">
-        <a href="${ctaUrl}" style="display:inline-flex;align-items:center;padding:0.75rem 2rem;background:var(--accent);color:var(--accent-text);border-radius:0.5rem;font-weight:600;font-size:0.9375rem;box-shadow:0 1px 3px rgba(0,0,0,0.12),0 1px 2px rgba(0,0,0,0.06);transition:all 0.15s">${escapeHtml(ctaText)}</a>
-        <a href="#features" style="display:inline-flex;align-items:center;padding:0.75rem 1.5rem;color:var(--text);font-weight:600;font-size:0.9375rem;gap:0.375rem">Learn more <span aria-hidden="true">&rarr;</span></a>
+    ? `<div class="mt-10 flex items-center justify-center gap-x-6">
+        <a href="${ctaUrl}" class="${t.accentBg} ${t.accentBgHover} ${t.accentText} px-6 py-3.5 text-sm font-semibold rounded-xl shadow-sm transition-all duration-200">${escapeHtml(ctaText)}</a>
+        <a href="#features" class="${t.textMuted} ${t.accentHover} text-sm font-semibold transition-colors">Learn more <span aria-hidden="true">&rarr;</span></a>
       </div>`
     : ''
 
-  return `<section style="padding:6rem 1.5rem 5rem;text-align:center;max-width:800px;margin:0 auto">
-    <h1 style="font-size:clamp(2.5rem,5.5vw,3.75rem);font-weight:800;line-height:1.1;letter-spacing:-0.035em;color:var(--text)">${escapeHtml(title)}</h1>
-    <p style="margin-top:1.5rem;font-size:1.125rem;color:var(--muted);line-height:1.75;max-width:640px;margin-left:auto;margin-right:auto">${escapeHtml(subtitle)}</p>
+  return `<section class="py-24 sm:py-32">
+  <div class="max-w-4xl mx-auto px-6 lg:px-8 text-center">
+    <h1 class="text-4xl font-extrabold tracking-tight ${t.text} sm:text-6xl lg:text-7xl">${escapeHtml(title)}</h1>
+    <p class="mt-6 text-lg leading-8 ${t.textMuted} sm:text-xl">${escapeHtml(subtitle)}</p>
     ${ctaHtml}
-  </section>`
+  </div>
+</section>`
 }

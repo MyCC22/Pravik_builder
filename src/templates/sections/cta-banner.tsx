@@ -1,15 +1,16 @@
-import { escapeHtml } from '../render'
+import type { ThemeClasses } from '../theme-classes'
+import { escapeHtml } from '../utils'
 
-export function renderCTABanner(title: string, subtitle?: string, ctaText = 'Get Started', ctaUrl = '#contact'): string {
-  const subtitleHtml = subtitle
-    ? `<p style="margin-top:1rem;font-size:1.0625rem;color:var(--muted);max-width:480px;margin-left:auto;margin-right:auto">${escapeHtml(subtitle)}</p>`
+export function renderCTABanner(title: string, subtitle: string, t: ThemeClasses, ctaText?: string, ctaUrl = '#contact'): string {
+  const btnHtml = ctaText
+    ? `<a href="${ctaUrl}" class="${t.accentBg} ${t.accentBgHover} ${t.accentText} px-8 py-4 text-base font-semibold rounded-xl shadow-lg transition-all duration-200">${escapeHtml(ctaText)}</a>`
     : ''
 
-  return `<section style="text-align:center;background:var(--surface);border-radius:1rem;max-width:1000px;margin:0 auto;padding:4rem 2rem">
-    <h2 style="font-size:clamp(1.75rem,3vw,2.5rem);font-weight:800;color:var(--text);letter-spacing:-0.025em">${escapeHtml(title)}</h2>
-    ${subtitleHtml}
-    <div style="margin-top:2rem">
-      <a href="${ctaUrl}" style="display:inline-flex;align-items:center;padding:0.75rem 2rem;background:var(--accent);color:var(--accent-text);border-radius:0.5rem;font-weight:600;font-size:0.9375rem;box-shadow:0 1px 3px rgba(0,0,0,0.12);transition:all 0.15s">${escapeHtml(ctaText)}</a>
-    </div>
-  </section>`
+  return `<section class="py-24 sm:py-32">
+  <div class="max-w-4xl mx-auto px-6 lg:px-8 text-center">
+    <h2 class="text-3xl font-bold tracking-tight ${t.text} sm:text-4xl">${escapeHtml(title)}</h2>
+    <p class="mt-4 text-lg leading-8 ${t.textMuted}">${escapeHtml(subtitle)}</p>
+    ${btnHtml ? `<div class="mt-10">${btnHtml}</div>` : ''}
+  </div>
+</section>`
 }

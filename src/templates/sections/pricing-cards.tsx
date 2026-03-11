@@ -1,36 +1,44 @@
 import type { PricingPlan } from '../types'
-import { escapeHtml } from '../render'
+import type { ThemeClasses } from '../theme-classes'
+import { escapeHtml } from '../utils'
 
-export function renderPricingCards(plans: PricingPlan[]): string {
-  const cards = plans.map((p) => {
-    const isHighlighted = !!p.highlighted
-    const cardBg = isHighlighted ? 'var(--accent)' : 'var(--surface)'
-    const cardColor = isHighlighted ? 'var(--accent-text)' : 'var(--text)'
-    const mutedColor = isHighlighted ? 'rgba(255,255,255,0.7)' : 'var(--muted)'
-    const border = isHighlighted ? '2px solid var(--accent)' : '1px solid var(--border)'
-    const btnBg = isHighlighted ? 'var(--accent-text)' : 'var(--accent)'
-    const btnColor = isHighlighted ? 'var(--accent)' : 'var(--accent-text)'
-    const shadow = isHighlighted ? 'box-shadow:0 8px 30px rgba(0,0,0,0.12);transform:scale(1.02);' : ''
-    const badge = isHighlighted ? `<span style="display:inline-block;background:var(--accent-text);color:var(--accent);font-size:0.75rem;font-weight:600;padding:0.25rem 0.75rem;border-radius:1rem;margin-bottom:1rem">Most popular</span>` : ''
+export function renderPricingCards(plans: PricingPlan[], t: ThemeClasses): string {
+  const cards = plans.map(p => {
+    const highlighted = p.highlighted
+    const cardBg = highlighted ? `${t.accentBg} ${t.accentText}` : `${t.surface} ${t.border}`
+    const titleColor = highlighted ? t.accentText : t.text
+    const priceColor = highlighted ? t.accentText : t.text
+    const featureColor = highlighted ? `${t.accentText} opacity-90` : t.textMuted
+    const checkColor = highlighted ? t.accentText : t.accent
+    const btnClass = highlighted
+      ? `bg-white text-slate-900 hover:bg-slate-100`
+      : `${t.accentBg} ${t.accentBgHover} ${t.accentText}`
 
-    const featuresHtml = p.features.map((f) =>
-      `<li style="display:flex;align-items:center;gap:0.5rem"><span style="color:${isHighlighted ? 'var(--accent-text)' : 'var(--accent)'};font-weight:700">&#10003;</span> ${escapeHtml(f)}</li>`
+    const featuresHtml = p.features.map(f =>
+      `<li class="flex items-start gap-3">
+        <svg class="w-5 h-5 ${checkColor} mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <span class="${featureColor} text-sm">${escapeHtml(f)}</span>
+      </li>`
     ).join('')
 
-    return `<div style="background:${cardBg};color:${cardColor};border:${border};border-radius:1rem;padding:2rem;display:flex;flex-direction:column;${shadow}">
-      ${badge}
-      <h3 style="font-size:1.125rem;font-weight:600;margin-bottom:0.5rem;color:${cardColor}">${escapeHtml(p.plan)}</h3>
-      <div style="margin-bottom:1.5rem"><span style="font-size:2.5rem;font-weight:800;letter-spacing:-0.025em">${escapeHtml(p.price)}</span></div>
-      <ul style="list-style:none;padding:0;margin-bottom:2rem;font-size:0.875rem;line-height:2.25;color:${mutedColor};flex-grow:1">${featuresHtml}</ul>
-      <a href="#contact" style="display:block;text-align:center;padding:0.75rem 1.5rem;border-radius:0.5rem;font-weight:600;font-size:0.875rem;background:${btnBg};color:${btnColor};box-shadow:0 1px 3px rgba(0,0,0,0.1);transition:all 0.15s">Get started</a>
+    return `<div class="${cardBg} rounded-2xl p-8 ${highlighted ? 'shadow-xl scale-105 relative z-10' : 'shadow-sm'}">
+      ${highlighted ? '<div class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-white text-slate-900 text-xs font-bold rounded-full shadow">Most Popular</div>' : ''}
+      <h3 class="text-lg font-semibold ${titleColor}">${escapeHtml(p.plan)}</h3>
+      <p class="mt-4 flex items-baseline gap-1">
+        <span class="text-4xl font-extrabold tracking-tight ${priceColor}">${escapeHtml(p.price)}</span>
+      </p>
+      <ul class="mt-8 space-y-3">${featuresHtml}</ul>
+      <a href="#contact" class="mt-8 block text-center ${btnClass} px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-200">Get started</a>
     </div>`
   }).join('')
 
-  return `<section id="pricing" style="max-width:1100px;margin:0 auto">
-    <div style="text-align:center;margin-bottom:3rem">
-      <h2 style="font-size:clamp(1.75rem,3vw,2.25rem);font-weight:700;color:var(--text);letter-spacing:-0.025em">Simple, transparent pricing</h2>
-      <p style="margin-top:0.75rem;font-size:1.0625rem;color:var(--muted)">Choose the plan that works best for you.</p>
+  return `<section id="pricing" class="py-24 sm:py-32">
+  <div class="max-w-7xl mx-auto px-6 lg:px-8">
+    <div class="max-w-2xl mx-auto text-center mb-16">
+      <h2 class="text-3xl font-bold tracking-tight ${t.text} sm:text-4xl">Simple, transparent pricing</h2>
+      <p class="mt-4 text-lg leading-8 ${t.textMuted}">Choose the plan that works best for you.</p>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;align-items:start">${cards}</div>
-  </section>`
+    <div class="grid grid-cols-1 md:grid-cols-${plans.length > 2 ? '3' : '2'} gap-8 max-w-5xl mx-auto items-center">${cards}</div>
+  </div>
+</section>`
 }

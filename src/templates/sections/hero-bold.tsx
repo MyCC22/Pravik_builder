@@ -1,8 +1,18 @@
-import { escapeHtml } from '../render'
+import type { ThemeClasses } from '../theme-classes'
+import { escapeHtml } from '../utils'
 
-export function renderHeroBold(title: string, subtitle: string): string {
-  return `<section style="padding:7rem 2rem 4rem;max-width:1200px;margin:0 auto">
-    <h1 style="font-size:clamp(3rem,7vw,5.5rem);font-weight:900;line-height:1.0;letter-spacing:-0.04em;text-transform:uppercase;color:var(--text)">${escapeHtml(title)}</h1>
-    <p style="margin-top:1.5rem;font-size:1.125rem;color:var(--muted);max-width:480px;line-height:1.75">${escapeHtml(subtitle)}</p>
-  </section>`
+export function renderHeroBold(title: string, subtitle: string, t: ThemeClasses, ctaText?: string, ctaUrl = '#contact'): string {
+  const ctaHtml = ctaText
+    ? `<div class="mt-10 flex items-center justify-center gap-x-6">
+        <a href="${ctaUrl}" class="${t.accentBg} ${t.accentBgHover} ${t.accentText} px-8 py-4 text-base font-semibold rounded-xl shadow-lg transition-all duration-200">${escapeHtml(ctaText)}</a>
+      </div>`
+    : ''
+
+  return `<section class="py-32 sm:py-40">
+  <div class="max-w-5xl mx-auto px-6 lg:px-8 text-center">
+    <h1 class="text-5xl font-black tracking-tight ${t.text} sm:text-7xl lg:text-8xl leading-[0.9]">${escapeHtml(title)}</h1>
+    <p class="mt-8 text-xl leading-8 ${t.textMuted} max-w-2xl mx-auto">${escapeHtml(subtitle)}</p>
+    ${ctaHtml}
+  </div>
+</section>`
 }
