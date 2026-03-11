@@ -15,6 +15,8 @@ Available intents:
 - "remove_block": User wants to delete a section
 - "reorder_blocks": User wants to move sections around
 - "change_theme": User wants to change colors or theme
+- "edit_tool": User wants to modify the booking/lead capture form (fields, branding, button text)
+- "add_tool": User wants to add a booking form or lead capture form to their site
 - "generate_site": User wants to completely rebuild the site from scratch
 - "clarify": The request is too ambiguous to act on — ask a question`
     : `
@@ -50,10 +52,15 @@ Rules:
 - For remove_block: target_blocks should contain the block type(s) to remove
 - For change_theme: target_blocks can be empty
 - For generate_site: target_blocks can be empty
+- For edit_tool and add_tool: target_blocks can be empty
 - When the user mentions "top" or "header", that's usually the navbar
 - When the user mentions "bottom" or "end", that's usually the footer
 - "Colors", "darker", "lighter", "warmer" → change_theme
 - "Add phone number" or "change text" on an existing section → edit_block
 - "Add a testimonials section" → add_block
+- "form", "booking form", "fields", "dropdown", "add a field", "change the form", "make required", "update the form" → edit_tool
+- "add a booking form", "add a contact form", "add lead capture" → add_tool
+- "add a contact section", "add a features section" → add_block (HTML section, NOT a tool)
+- Key distinction: form-specific language (fields, dropdown, required, form fields) → tool intents. Section-specific language (section, block) → block intents.
 - If unsure which block the user means, use clarify`
 }
