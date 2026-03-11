@@ -1,11 +1,16 @@
 import { getSupabaseClient } from '@/services/supabase/client'
 import { createClient } from '@supabase/supabase-js'
 import { routeIntent } from './router'
-import { generateSite } from './generator'
+import { generateSite, renderAndStoreBlocks } from './generator'
 import { editBlock, addBlock } from './block-editor'
 import { pickTheme } from './theme-agent'
 import { generateBookingTool } from './tool-generator'
 import { editToolConfig } from './tool-editor'
+import { fetchSingleImage } from '@/services/unsplash/image-fetcher'
+import { crawlSite } from '@/services/scraper/firecrawl'
+import { extractContent } from '@/services/scraper/extractor'
+import { analyzeScreenshot } from '@/services/scraper/visual-analyzer'
+import { generateCloneConfig } from '@/services/scraper/clone-generator'
 import type { Block, AgentResponse, ToolConfig } from './types'
 
 function getServiceSupabase() {
@@ -13,6 +18,41 @@ function getServiceSupabase() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
+}
+
+/**
+ * After generating a booking tool, patch any block HTML that still has
+ * placeholder hrefs (#contact, #booking) so CTA buttons point to /book/{projectId}.
+ */
+async function patchBlockBookingUrls(projectId: string, supabase: ReturnType<typeof getSupabaseClient>) {
+  const bookingUrl = `/book/${projectId}`
+
+  // Load all blocks for this project
+  const { data: blocks } = await supabase
+    .from('blocks')
+    .select('id, block_type, html')
+    .eq('project_id', projectId)
+
+  if (!blocks) return
+
+  // Patch blocks that contain placeholder hrefs
+  const ctaBlockTypes = ['hero', 'cta', 'booking', 'contact', 'custom']
+  for (const block of blocks) {
+    if (!ctaBlockTypes.includes(block.block_type) && !block.html.includes('#contact')) continue
+
+    let patched = block.html
+    // Replace common placeholder hrefs with the real booking URL
+    patched = patched.replace(/href="#contact"/g, `href="${bookingUrl}"`)
+    patched = patched.replace(/href="#booking"/g, `href="${bookingUrl}"`)
+    patched = patched.replace(/href="#book"/g, `href="${bookingUrl}"`)
+
+    if (patched !== block.html) {
+      await supabase
+        .from('blocks')
+        .update({ html: patched, updated_at: new Date().toISOString() })
+        .eq('id', block.id)
+    }
+  }
 }
 
 export async function handleMessage(
@@ -54,6 +94,9 @@ export async function handleMessage(
         .from('projects')
         .update({ template_config: updatedConfig, updated_at: new Date().toISOString() })
         .eq('id', projectId)
+
+      // Safety net: patch any block HTML that still has placeholder hrefs
+      await patchBlockBookingUrls(projectId, supabase)
     }
 
     return {
@@ -84,11 +127,95 @@ export async function handleMessage(
           .from('projects')
           .update({ template_config: updatedConfig, updated_at: new Date().toISOString() })
           .eq('id', projectId)
+
+        // Safety net: patch any block HTML that still has placeholder hrefs
+        await patchBlockBookingUrls(projectId, supabase)
       }
 
       return {
         action: 'generated',
         message: `Rebuilt your website! Sections: ${blockTypes} with the ${result.theme} theme.${toolConfig ? ` Booking form updated at /book/${projectId}` : ''}`,
+      }
+    }
+
+    case 'clone_site': {
+      const cloneUrl = route.clone_url || route.description
+      const cloneMode = route.clone_mode || 'content'
+
+      // Validate URL — try to fix bare domains
+      let targetUrl = cloneUrl
+      if (!targetUrl || !targetUrl.match(/^https?:\/\//)) {
+        if (targetUrl && targetUrl.match(/\w+\.\w+/)) {
+          targetUrl = `https://${targetUrl}`
+        } else {
+          return {
+            action: 'clarify',
+            message: "I need a valid URL to clone. Could you provide the full website address? (e.g., https://example.com)",
+            question: "What's the URL of the website you'd like to clone?",
+          }
+        }
+      }
+
+      // Step 1: Crawl the site
+      const crawlResult = await crawlSite(targetUrl)
+      if (!crawlResult) {
+        return {
+          action: 'clarify',
+          message: "I couldn't access that website. Please check the URL and make sure the site is publicly accessible, then try again.",
+          question: 'Could you double-check the URL?',
+        }
+      }
+
+      // Step 2: Extract structured content
+      const extracted = extractContent(crawlResult)
+
+      // Step 3: Visual analysis (only in style mode + if screenshot available)
+      let visualAnalysis = null
+      if (cloneMode === 'content_and_style' && crawlResult.mainPage.screenshot) {
+        visualAnalysis = await analyzeScreenshot(crawlResult.mainPage.screenshot)
+      }
+
+      // Step 4: Generate TemplateConfig via clone generator AI
+      const config = await generateCloneConfig(extracted, visualAnalysis, projectId)
+
+      // Step 5: Delete existing blocks and tools
+      await supabase.from('blocks').delete().eq('project_id', projectId)
+      await supabase.from('tools').delete().eq('project_id', projectId)
+
+      // Step 6: Render, fetch images, split into blocks, store
+      const result = await renderAndStoreBlocks(config, projectId)
+      const blockTypes = result.blocks.map(b => b.block_type).join(', ')
+
+      // Step 7: Auto-generate booking tool
+      const templateType = result.config.template || 'landing'
+      const toolConfig = await generateBookingTool(
+        extracted.siteName || message,
+        projectId,
+        templateType
+      )
+
+      if (toolConfig) {
+        const updatedContent = {
+          ...result.config.content,
+          bookingUrl: `/book/${projectId}`,
+          bookingText: toolConfig.submitText,
+        }
+        const updatedConfig = { ...result.config, content: updatedContent }
+        await supabase
+          .from('projects')
+          .update({ template_config: updatedConfig, updated_at: new Date().toISOString() })
+          .eq('id', projectId)
+
+        await patchBlockBookingUrls(projectId, supabase)
+      }
+
+      const styleNote = visualAnalysis
+        ? ` I matched the ${visualAnalysis.colors.mood} color vibe and ${visualAnalysis.layout.heroStyle} layout from the original.`
+        : ''
+
+      return {
+        action: 'generated',
+        message: `Your site is ready! I rebuilt it from ${extracted.siteName}'s content with fresh images. Sections: ${blockTypes}.${styleNote}${toolConfig ? ` Booking form live at /book/${projectId}` : ''}`,
       }
     }
 
@@ -105,7 +232,7 @@ export async function handleMessage(
       }
 
       const allBlockTypes = currentBlocks.map(b => b.block_type)
-      const updatedHtml = await editBlock(targetBlock, message, allBlockTypes)
+      const updatedHtml = await editBlock(targetBlock, message, allBlockTypes, projectId)
 
       await supabase
         .from('blocks')
@@ -155,6 +282,72 @@ export async function handleMessage(
       return {
         action: 'reordered',
         message: `I'll reorder the sections as requested. (Reordering is coming soon — for now, you can remove and re-add sections in the order you want.)`,
+      }
+    }
+
+    case 'change_image': {
+      const imageTargetType = route.target_blocks[0] || 'hero'
+      const imageBlock = currentBlocks.find(b => b.block_type === imageTargetType)
+
+      if (!imageBlock) {
+        return {
+          action: 'clarify',
+          message: `I couldn't find a "${imageTargetType}" section with an image. Your site has: ${currentBlocks.map(b => b.block_type).join(', ')}`,
+          question: `Which section's image would you like to change?`,
+        }
+      }
+
+      // Use the router's description as the search query (what kind of image the user wants)
+      const searchQuery = route.description || message
+      const newImageUrl = await fetchSingleImage(searchQuery, 'landscape')
+
+      if (!newImageUrl) {
+        return {
+          action: 'clarify',
+          message: "I couldn't find a matching image. Could you describe the kind of image you'd like?",
+          question: "What kind of image would you like?",
+        }
+      }
+
+      // Replace image URLs in the block HTML
+      let patchedHtml = imageBlock.html
+      // Replace background-image inline styles
+      patchedHtml = patchedHtml.replace(
+        /background-image:\s*url\(['"]?[^'")\s]+['"]?\)/g,
+        `background-image:url('${newImageUrl}')`
+      )
+      // Replace <img> src attributes (for hero-split)
+      patchedHtml = patchedHtml.replace(
+        /src="https:\/\/images\.unsplash\.com[^"]*"/g,
+        `src="${newImageUrl}"`
+      )
+
+      // If no image was found to replace (block might use gradient), add one
+      if (patchedHtml === imageBlock.html && imageTargetType === 'hero') {
+        // For hero blocks without images, convert to image-backed hero
+        // Replace gradient background with image background
+        patchedHtml = patchedHtml.replace(
+          /background:linear-gradient\([^)]+\)/g,
+          `background-image:url('${newImageUrl}');background-size:cover;background-position:center`
+        )
+      }
+
+      if (patchedHtml !== imageBlock.html) {
+        await supabase
+          .from('blocks')
+          .update({ html: patchedHtml, updated_at: new Date().toISOString() })
+          .eq('id', imageBlock.id)
+
+        return {
+          action: 'edited',
+          message: `Done! I updated the ${imageTargetType} image.`,
+        }
+      }
+
+      return {
+        action: 'clarify',
+        message: `The ${imageTargetType} section doesn't have an image to replace. Would you like me to add one?`,
+        question: `Would you like me to add an image to the ${imageTargetType} section?`,
       }
     }
 
@@ -256,6 +449,9 @@ export async function handleMessage(
           .update({ template_config: config, updated_at: new Date().toISOString() })
           .eq('id', projectId)
       }
+
+      // Safety net: patch any block HTML that still has placeholder hrefs
+      await patchBlockBookingUrls(projectId, supabase)
 
       return {
         action: 'tool_created',

@@ -4,6 +4,7 @@ import { TEMPLATE_IDS, THEME_IDS, resolveTemplateId } from '@/templates/types'
 import type { TemplateConfig, TemplateId, ThemeId } from '@/templates/types'
 import { renderTemplate } from '@/templates/render'
 import { getSupabaseClient } from '@/services/supabase/client'
+import { fetchTemplateImages } from '@/services/unsplash/image-fetcher'
 import type { Block } from './types'
 
 let client: Anthropic | null = null
@@ -93,30 +94,40 @@ function splitHtmlIntoBlocks(html: string): { block_type: string; html: string }
   return blocks
 }
 
-export async function generateSite(
-  message: string,
+/**
+ * Given a validated TemplateConfig and a projectId, this function:
+ * 1. Fetches images from Unsplash (with graceful fallback)
+ * 2. Injects image URLs into config.content
+ * 3. Renders full HTML via renderTemplate
+ * 4. Extracts body content
+ * 5. Splits into blocks via splitHtmlIntoBlocks
+ * 6. Stores blocks in DB
+ * 7. Updates the project row with theme, template_config, preview_url
+ * 8. Returns { blocks, theme, config }
+ */
+export async function renderAndStoreBlocks(
+  config: TemplateConfig,
   projectId: string
 ): Promise<{ blocks: Block[]; theme: ThemeId; config: TemplateConfig }> {
-  const systemPrompt = getGeneratorPrompt()
+  const theme = config.theme as ThemeId
 
-  const response = await getClient().messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 4096,
-    system: systemPrompt,
-    messages: [{ role: 'user', content: message }],
-  })
+  // Fetch images from Unsplash (runs in parallel, gracefully falls back to gradients)
+  try {
+    const images = await fetchTemplateImages(config)
 
-  const text = response.content[0].type === 'text' ? response.content[0].text : ''
-  const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim()
-  const parsed = JSON.parse(cleaned) as TemplateConfig
+    if (images.heroImageUrl) {
+      config.content.heroImageUrl = images.heroImageUrl
+    }
 
-  // Validate and fallback
-  const template = resolveTemplateId(parsed.template)
-  const theme: ThemeId = THEME_IDS.includes(parsed.theme as ThemeId)
-    ? (parsed.theme as ThemeId)
-    : 'clean'
-
-  const config: TemplateConfig = { ...parsed, template, theme }
+    if (images.galleryImageUrls && config.content.galleryItems) {
+      config.content.galleryItems = config.content.galleryItems.map((item, i) => ({
+        ...item,
+        imageUrl: images.galleryImageUrls![i] || undefined,
+      }))
+    }
+  } catch (err) {
+    console.error('Image fetch failed, using gradient placeholders:', err)
+  }
 
   // Render full HTML using existing template system
   const fullHtml = renderTemplate(config)
@@ -159,4 +170,32 @@ export async function generateSite(
     .eq('id', projectId)
 
   return { blocks: insertedBlocks as Block[], theme, config }
+}
+
+export async function generateSite(
+  message: string,
+  projectId: string
+): Promise<{ blocks: Block[]; theme: ThemeId; config: TemplateConfig }> {
+  const systemPrompt = getGeneratorPrompt(projectId)
+
+  const response = await getClient().messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 4096,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: message }],
+  })
+
+  const text = response.content[0].type === 'text' ? response.content[0].text : ''
+  const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim()
+  const parsed = JSON.parse(cleaned) as TemplateConfig
+
+  // Validate and fallback
+  const template = resolveTemplateId(parsed.template)
+  const theme: ThemeId = THEME_IDS.includes(parsed.theme as ThemeId)
+    ? (parsed.theme as ThemeId)
+    : 'clean'
+
+  const config: TemplateConfig = { ...parsed, template, theme }
+
+  return renderAndStoreBlocks(config, projectId)
 }
