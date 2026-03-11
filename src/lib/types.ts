@@ -24,6 +24,7 @@ export interface Message {
   project_id: string
   role: 'user' | 'assistant'
   content: string
+  image_urls?: string[]
   created_at: string
 }
 

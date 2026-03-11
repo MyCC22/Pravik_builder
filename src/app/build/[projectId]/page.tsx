@@ -87,14 +87,39 @@ export default function BuilderPage() {
   }, [isVoiceCall, projectId, previewUrl])
 
   const handleSend = useCallback(
-    async (message: string) => {
+    async (message: string, images?: File[]) => {
       if (!projectId) return
+
+      // Upload images first (if any) and collect URLs
+      let imageUrls: string[] = []
+      if (images && images.length > 0) {
+        try {
+          const uploads = await Promise.all(
+            images.map(async (file) => {
+              const formData = new FormData()
+              formData.append('file', file)
+              formData.append('project_id', projectId)
+              const res = await fetch('/api/builder/upload-image', {
+                method: 'POST',
+                body: formData,
+              })
+              if (!res.ok) throw new Error('Upload failed')
+              const data = await res.json()
+              return data.url as string
+            })
+          )
+          imageUrls = uploads
+        } catch (err) {
+          console.error('Image upload error:', err)
+        }
+      }
 
       const tempMsg: Message = {
         id: `temp-${Date.now()}`,
         project_id: projectId,
         role: 'user',
         content: message,
+        image_urls: imageUrls.length > 0 ? imageUrls : undefined,
         created_at: new Date().toISOString(),
       }
       setMessages((prev) => [...prev, tempMsg])
@@ -105,7 +130,11 @@ export default function BuilderPage() {
         const res = await fetch('/api/builder/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message, project_id: projectId }),
+          body: JSON.stringify({
+            message,
+            project_id: projectId,
+            ...(imageUrls.length > 0 ? { image_urls: imageUrls } : {}),
+          }),
         })
 
         if (!res.ok) {

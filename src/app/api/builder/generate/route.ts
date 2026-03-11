@@ -6,7 +6,7 @@ export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, project_id } = await req.json()
+    const { message, project_id, image_urls } = await req.json()
 
     if (!message || !project_id) {
       return NextResponse.json(
@@ -15,14 +15,19 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Run the multi-agent orchestrator
-    const result = await handleMessage(message, project_id)
+    // Run the multi-agent orchestrator (pass image_urls if present)
+    const result = await handleMessage(message, project_id, image_urls)
 
     const supabase = getSupabaseClient()
 
-    // Store messages
+    // Store messages (include image_urls if present)
     await supabase.from('messages').insert([
-      { project_id, role: 'user', content: message },
+      {
+        project_id,
+        role: 'user',
+        content: message,
+        ...(image_urls?.length ? { image_urls } : {}),
+      },
       { project_id, role: 'assistant', content: result.message },
     ])
 

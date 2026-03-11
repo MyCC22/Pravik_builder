@@ -7,7 +7,7 @@ import type { Message } from '@/lib/types'
 
 interface ChatPanelProps {
   messages: Message[]
-  onSend: (message: string) => void
+  onSend: (message: string, images?: File[]) => void
   loading?: boolean
 }
 
