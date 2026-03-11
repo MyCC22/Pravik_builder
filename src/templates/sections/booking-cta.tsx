@@ -2,7 +2,7 @@ import type { ThemeClasses } from '../theme-classes'
 import { escapeHtml } from '../utils'
 
 export function renderBookingCTA(t: ThemeClasses, bookingText = 'Book Now', bookingUrl = '#contact'): string {
-  return `<section class="py-20 sm:py-24">
+  return `<section id="booking" class="py-20 sm:py-24">
   <div class="max-w-4xl mx-auto px-6 lg:px-8">
     <div class="${t.accentBg} rounded-3xl px-8 py-16 sm:px-16 text-center">
       <h2 class="text-3xl font-bold tracking-tight ${t.accentText} sm:text-4xl">Ready to get started?</h2>

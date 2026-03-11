@@ -16,7 +16,7 @@ export function renderGalleryAsymmetric(items: GalleryItem[], t: ThemeClasses): 
     </div>`
   }).join('')
 
-  return `<section class="py-24 sm:py-32">
+  return `<section id="gallery" class="py-24 sm:py-32">
   <div class="max-w-7xl mx-auto px-6 lg:px-8">
     <div class="max-w-2xl mx-auto text-center mb-16">
       <h2 class="text-3xl font-bold tracking-tight ${t.text} sm:text-4xl">Selected work</h2>

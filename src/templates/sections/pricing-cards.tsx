@@ -32,13 +32,15 @@ export function renderPricingCards(plans: PricingPlan[], t: ThemeClasses): strin
     </div>`
   }).join('')
 
+  const gridCols = plans.length > 2 ? 'md:grid-cols-3' : 'md:grid-cols-2'
+
   return `<section id="pricing" class="py-24 sm:py-32">
   <div class="max-w-7xl mx-auto px-6 lg:px-8">
     <div class="max-w-2xl mx-auto text-center mb-16">
       <h2 class="text-3xl font-bold tracking-tight ${t.text} sm:text-4xl">Simple, transparent pricing</h2>
       <p class="mt-4 text-lg leading-8 ${t.textMuted}">Choose the plan that works best for you.</p>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-${plans.length > 2 ? '3' : '2'} gap-8 max-w-5xl mx-auto items-center">${cards}</div>
+    <div class="grid grid-cols-1 ${gridCols} gap-8 max-w-5xl mx-auto items-center">${cards}</div>
   </div>
 </section>`
 }

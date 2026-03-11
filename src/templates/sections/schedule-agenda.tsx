@@ -16,7 +16,7 @@ export function renderSchedule(schedule: ScheduleItem[], t: ThemeClasses): strin
     </div>`
   ).join('')
 
-  return `<section class="py-24 sm:py-32">
+  return `<section id="schedule" class="py-24 sm:py-32">
   <div class="max-w-3xl mx-auto px-6 lg:px-8">
     <div class="text-center mb-16">
       <h2 class="text-3xl font-bold tracking-tight ${t.text} sm:text-4xl">Schedule</h2>

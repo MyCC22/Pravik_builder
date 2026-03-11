@@ -9,9 +9,11 @@ export function renderStatsCounter(stats: StatItem[], t: ThemeClasses): string {
     </div>`
   ).join('')
 
-  return `<section class="py-20 sm:py-24 ${t.sectionAlt}">
+  const gridCols = stats.length > 3 ? 'md:grid-cols-4' : stats.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'
+
+  return `<section id="stats" class="py-20 sm:py-24 ${t.sectionAlt}">
   <div class="max-w-7xl mx-auto px-6 lg:px-8">
-    <div class="grid grid-cols-2 md:grid-cols-${stats.length > 3 ? '4' : stats.length} gap-8">${items}</div>
+    <div class="grid grid-cols-2 ${gridCols} gap-8">${items}</div>
   </div>
 </section>`
 }

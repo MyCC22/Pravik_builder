@@ -36,7 +36,7 @@ function splitHtmlIntoBlocks(html: string): { block_type: string; html: string }
       const lower = match.toLowerCase()
       let blockType = 'custom'
 
-      if (lower.includes('id="features"') || lower.includes('id="features"')) {
+      if (lower.includes('id="features"')) {
         blockType = 'features'
       } else if (lower.includes('id="pricing"') || lower.includes('pricing')) {
         blockType = 'pricing'
@@ -48,6 +48,30 @@ function splitHtmlIntoBlocks(html: string): { block_type: string; html: string }
         blockType = 'testimonials'
       } else if (lower.includes('id="cta"') || lower.includes('call-to-action') || lower.includes('get started')) {
         blockType = 'cta'
+      } else if (lower.includes('id="services"') || lower.includes('what we offer')) {
+        blockType = 'services'
+      } else if (lower.includes('id="process"') || lower.includes('how it works')) {
+        blockType = 'process'
+      } else if (lower.includes('id="team"') || lower.includes('meet the team')) {
+        blockType = 'team'
+      } else if (lower.includes('id="clients"') || lower.includes('trusted by')) {
+        blockType = 'clients'
+      } else if (lower.includes('id="faq"') || lower.includes('frequently asked')) {
+        blockType = 'faq'
+      } else if (lower.includes('id="menu"') || lower.includes('our menu')) {
+        blockType = 'menu'
+      } else if (lower.includes('id="hours"') || lower.includes('visit us')) {
+        blockType = 'hours'
+      } else if (lower.includes('id="booking"') || lower.includes('ready to get started')) {
+        blockType = 'booking'
+      } else if (lower.includes('id="schedule"') || lower.includes('schedule')) {
+        blockType = 'schedule'
+      } else if (lower.includes('id="speakers"') || lower.includes('speakers')) {
+        blockType = 'speakers'
+      } else if (lower.includes('id="stats"')) {
+        blockType = 'stats'
+      } else if (lower.includes('id="results"') || lower.includes('real results')) {
+        blockType = 'before-after'
       } else if (!heroAssigned) {
         blockType = 'hero'
         heroAssigned = true

@@ -17,7 +17,7 @@ export function renderTestimonials(testimonials: Testimonial[], t: ThemeClasses)
     </div>`
   ).join('')
 
-  return `<section class="py-24 sm:py-32 ${t.sectionAlt}">
+  return `<section id="testimonials" class="py-24 sm:py-32 ${t.sectionAlt}">
   <div class="max-w-7xl mx-auto px-6 lg:px-8">
     <div class="max-w-2xl mx-auto text-center mb-16">
       <h2 class="text-3xl font-bold tracking-tight ${t.text} sm:text-4xl">Loved by our customers</h2>

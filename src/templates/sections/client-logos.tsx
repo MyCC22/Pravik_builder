@@ -9,7 +9,7 @@ export function renderClientLogos(clients: ClientLogo[], t: ThemeClasses): strin
     </div>`
   ).join('')
 
-  return `<section class="py-16 sm:py-20">
+  return `<section id="clients" class="py-16 sm:py-20">
   <div class="max-w-7xl mx-auto px-6 lg:px-8">
     <p class="text-center text-sm font-medium ${t.textMuted} mb-8">Trusted by leading companies</p>
     <div class="flex flex-wrap items-center justify-center gap-4">${logos}</div>
