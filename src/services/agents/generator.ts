@@ -89,7 +89,7 @@ export async function generateSite(
   // Validate and fallback
   const template: TemplateId = TEMPLATE_IDS.includes(parsed.template as TemplateId)
     ? (parsed.template as TemplateId)
-    : 'landing-light'
+    : 'landing'
   const theme: ThemeId = THEME_IDS.includes(parsed.theme as ThemeId)
     ? (parsed.theme as ThemeId)
     : 'clean'

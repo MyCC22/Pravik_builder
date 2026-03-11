@@ -1,12 +1,31 @@
 import type { TemplateConfig, TemplateId } from './types'
 import { resolveTemplateId } from './types'
 import { getThemeClasses } from './theme-classes'
+import { renderLanding } from './landing'
+import { renderLandingBold } from './landing-bold'
+import { renderServices } from './services'
+import { renderServicesBold } from './services-bold'
+import { renderRestaurant } from './restaurant'
+import { renderRestaurantDark } from './restaurant-dark'
+import { renderAgency } from './agency'
+import { renderAgencyEditorial } from './agency-editorial'
+import { renderEvent } from './event'
+import { renderEventDark } from './event-dark'
 
 export { escapeHtml } from './utils'
 
-// Template render functions will be added in Chunk 4
-// For now, stub the map — the old templates are deleted in Chunk 5
-const templateMap: Record<TemplateId, (config: TemplateConfig) => string> = {} as any
+const templateMap: Record<TemplateId, (config: TemplateConfig) => string> = {
+  'landing': renderLanding,
+  'landing-bold': renderLandingBold,
+  'services': renderServices,
+  'services-bold': renderServicesBold,
+  'restaurant': renderRestaurant,
+  'restaurant-dark': renderRestaurantDark,
+  'agency': renderAgency,
+  'agency-editorial': renderAgencyEditorial,
+  'event': renderEvent,
+  'event-dark': renderEventDark,
+}
 
 export function renderTemplate(config: TemplateConfig): string {
   const templateId = resolveTemplateId(config.template)
