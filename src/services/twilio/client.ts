@@ -47,6 +47,37 @@ export function generateTwiML(message: string, smsBody?: string, smsTo?: string)
   return twiml
 }
 
+export function generateConversationRelayTwiML(params: {
+  websocketUrl: string
+  callSid: string
+  projectId: string
+  userId: string
+  isNewUser: boolean
+  phoneNumber: string
+}): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Connect>
+    <ConversationRelay
+      url="${escapeXml(params.websocketUrl)}"
+      welcomeGreeting=""
+      ttsProvider="google"
+      voice="en-US-Studio-O"
+      transcriptionProvider="deepgram"
+      language="en-US"
+      interruptible="true"
+      dtmfDetection="true"
+    >
+      <Parameter name="callSid" value="${escapeXml(params.callSid)}" />
+      <Parameter name="projectId" value="${escapeXml(params.projectId)}" />
+      <Parameter name="userId" value="${escapeXml(params.userId)}" />
+      <Parameter name="isNewUser" value="${params.isNewUser ? 'true' : 'false'}" />
+      <Parameter name="phoneNumber" value="${escapeXml(params.phoneNumber)}" />
+    </ConversationRelay>
+  </Connect>
+</Response>`
+}
+
 function escapeXml(str: string): string {
   return str
     .replace(/&/g, '&amp;')

@@ -1,21 +1,65 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { BuilderLayout } from '@/features/builder/builder-layout'
 import { PreviewPanel } from '@/features/builder/preview-panel'
 import { ChatPanel } from '@/features/builder/chat-panel'
 import { useSession } from '@/features/auth/use-session'
+import { useCallSession } from '@/hooks/use-call-session'
 import type { Message, Project } from '@/lib/types'
 
 export default function BuilderPage() {
   const { projectId } = useParams<{ projectId: string }>()
+  const searchParams = useSearchParams()
+  const callSid = searchParams.get('session')
   const { user } = useSession()
   const [project, setProject] = useState<Project | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [action, setAction] = useState<string | null>(null)
+
+  // Refresh preview callback for voice call updates
+  const refreshPreview = useCallback(() => {
+    if (projectId) {
+      setPreviewUrl(`/api/builder/preview/${projectId}?t=${Date.now()}`)
+    }
+  }, [projectId])
+
+  // Voice call session — subscribes to Supabase Realtime for live updates
+  const { isVoiceCall, callActive, voiceMessages } = useCallSession(
+    callSid,
+    refreshPreview
+  )
+
+  // Notify voice server that page has been opened
+  useEffect(() => {
+    if (!callSid) return
+
+    fetch('/api/voice/page-opened', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ callSid }),
+    }).catch((err) => {
+      console.error('Failed to notify page opened:', err)
+    })
+  }, [callSid])
+
+  // Add voice messages to the chat panel
+  useEffect(() => {
+    if (voiceMessages.length === 0 || !projectId) return
+
+    const lastMsg = voiceMessages[voiceMessages.length - 1]
+    const msg: Message = {
+      id: `voice-${lastMsg.timestamp}`,
+      project_id: projectId,
+      role: lastMsg.role,
+      content: lastMsg.content,
+      created_at: new Date(lastMsg.timestamp).toISOString(),
+    }
+    setMessages((prev) => [...prev, msg])
+  }, [voiceMessages, projectId])
 
   useEffect(() => {
     if (!user || !projectId) return
@@ -34,6 +78,13 @@ export default function BuilderPage() {
         }
       })
   }, [user, projectId])
+
+  // For voice calls without auth, set initial preview URL
+  useEffect(() => {
+    if (isVoiceCall && projectId && !previewUrl) {
+      setPreviewUrl(`/api/builder/preview/${projectId}`)
+    }
+  }, [isVoiceCall, projectId, previewUrl])
 
   const handleSend = useCallback(
     async (message: string) => {
@@ -69,12 +120,10 @@ export default function BuilderPage() {
 
         setAction(result.action)
 
-        // Only refresh preview for non-clarify actions
         if (result.action !== 'clarify') {
           setPreviewUrl(`/api/builder/preview/${projectId}?t=${Date.now()}`)
         }
 
-        // Use the server's message directly
         const assistantMsg: Message = {
           id: `temp-assistant-${Date.now()}`,
           project_id: projectId,
@@ -109,6 +158,8 @@ export default function BuilderPage() {
       preview={<PreviewPanel url={previewUrl} loading={loading} action={action} />}
       chat={<ChatPanel messages={messages} onSend={handleSend} loading={loading} />}
       shareUrl={shareUrl}
+      isVoiceCall={isVoiceCall}
+      callActive={callActive}
     />
   )
 }

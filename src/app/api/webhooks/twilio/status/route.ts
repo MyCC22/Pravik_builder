@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyWebhookSignature } from '@/services/twilio/client'
+import { getSupabaseClient } from '@/services/supabase/client'
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,7 +10,7 @@ export async function POST(req: NextRequest) {
       params[key] = value.toString()
     })
 
-    // Verify Twilio signature using the public-facing URL
+    // Verify Twilio signature
     const signature = req.headers.get('x-twilio-signature') || ''
     const host = req.headers.get('host') || 'pravik-builder.vercel.app'
     const proto = req.headers.get('x-forwarded-proto') || 'https'
@@ -23,22 +24,19 @@ export async function POST(req: NextRequest) {
     const callSid = params.CallSid || ''
     const callStatus = params.CallStatus || ''
     const callDuration = params.CallDuration || ''
-    const from = params.From || ''
-    const to = params.To || ''
 
-    console.log(`Call status update: ${callSid} - ${callStatus} (duration: ${callDuration}s) from ${from} to ${to}`)
+    console.log(`Call status: ${callSid} - ${callStatus} (${callDuration}s)`)
 
-    // Handle specific statuses if needed
-    switch (callStatus) {
-      case 'completed':
-        console.log(`Call ${callSid} completed after ${callDuration}s`)
-        break
-      case 'busy':
-      case 'no-answer':
-      case 'failed':
-      case 'canceled':
-        console.log(`Call ${callSid} ended with status: ${callStatus}`)
-        break
+    // Update call_sessions on call completion
+    if (['completed', 'busy', 'no-answer', 'failed', 'canceled'].includes(callStatus)) {
+      const supabase = getSupabaseClient()
+      await supabase
+        .from('call_sessions')
+        .update({
+          state: 'ended',
+          ended_at: new Date().toISOString(),
+        })
+        .eq('call_sid', callSid)
     }
 
     return new NextResponse('OK', { status: 200 })

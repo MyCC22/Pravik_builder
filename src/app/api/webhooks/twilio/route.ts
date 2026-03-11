@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/services/supabase/client'
-import { verifyWebhookSignature, sendSMS, generateTwiML } from '@/services/twilio/client'
+import { verifyWebhookSignature, generateTwiML, generateConversationRelayTwiML } from '@/services/twilio/client'
 
 function getBaseUrl(req: NextRequest): string {
   const host = req.headers.get('host') || 'pravik-builder.vercel.app'
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       params[key] = value.toString()
     })
 
-    // Verify Twilio signature using the public-facing URL
+    // Verify Twilio signature
     const signature = req.headers.get('x-twilio-signature') || ''
     const publicUrl = `${getBaseUrl(req)}/api/webhooks/twilio`
     const isValid = await verifyWebhookSignature(publicUrl, params, signature)
@@ -44,6 +44,8 @@ export async function POST(req: NextRequest) {
       .eq('phone_number', callerPhone)
       .single()
 
+    const isNewUser = !user
+
     if (!user) {
       const { data: newUser, error } = await supabase
         .from('users')
@@ -56,7 +58,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create a session for this call
-    const { data: session, error: sessionError } = await supabase
+    const { error: sessionError } = await supabase
       .from('sessions')
       .insert({
         user_id: user.id,
@@ -64,34 +66,36 @@ export async function POST(req: NextRequest) {
         source: 'twilio',
         session_token: callSid,
       })
-      .select()
-      .single()
 
     if (sessionError) throw sessionError
 
-    // Create a new project for this call
+    // Create a new project for this voice call
     const { data: project, error: projectError } = await supabase
       .from('projects')
       .insert({
         user_id: user.id,
-        name: `Phone Build ${new Date().toLocaleDateString()}`,
+        name: `Voice Build ${new Date().toLocaleDateString()}`,
+        source: 'voice',
       })
       .select()
       .single()
 
     if (projectError) throw projectError
 
-    // Send SMS with builder link
-    const baseUrl = getBaseUrl(req)
-    const builderUrl = `${baseUrl}/build/${project.id}?session=${session.session_token}`
-    const smsBody = `Welcome to Pravik Builder! Open this link to start building your website: ${builderUrl}`
+    // Voice server WebSocket URL
+    const voiceServerUrl = process.env.VOICE_SERVER_WS_URL || 'wss://pravik-voice-server.up.railway.app/call'
 
-    await sendSMS(callerPhone, smsBody)
+    // Return ConversationRelay TwiML — hands the call to the voice server
+    const twiml = generateConversationRelayTwiML({
+      websocketUrl: voiceServerUrl,
+      callSid,
+      projectId: project.id,
+      userId: user.id,
+      isNewUser,
+      phoneNumber: callerPhone,
+    })
 
-    // Return TwiML voice response
-    const twiml = generateTwiML(
-      'Welcome to the new world! We just sent you a text message with a link to start building your website. Open it on your phone to get started. Goodbye!'
-    )
+    console.log(`Voice call from ${callerPhone} (${isNewUser ? 'new' : 'returning'}) -> project ${project.id}`)
 
     return new NextResponse(twiml, {
       headers: { 'Content-Type': 'text/xml' },

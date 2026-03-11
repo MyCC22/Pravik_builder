@@ -36,3 +36,19 @@ export interface Session {
   expires_at: string
   created_at: string
 }
+
+export interface CallSession {
+  id: string
+  call_sid: string
+  user_id: string
+  project_id: string | null
+  phone_number: string
+  state: string
+  is_new_user: boolean
+  page_opened: boolean
+  page_opened_at: string | null
+  metadata: Record<string, unknown>
+  started_at: string
+  ended_at: string | null
+  created_at: string
+}
