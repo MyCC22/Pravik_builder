@@ -32,7 +32,7 @@ Applied via Tailwind utility classes instead of CSS custom properties:
 |---|---|---|---|---|---|---|
 | clean | bg-white | text-slate-900 | blue-600 | slate-50 | slate-500 | slate-200 |
 | bold | bg-zinc-950 | text-white | indigo-500 | zinc-900 | zinc-400 | zinc-800 |
-| vibrant | gradient blue-purple | text-slate-900 | blue-600 | white/80 backdrop-blur | slate-600 | slate-200 |
+| vibrant | bg-gradient-to-br from-blue-50 via-purple-50 to-emerald-50 | text-slate-900 | blue-600 | bg-white/80 backdrop-blur-sm | slate-600 | slate-200 |
 | warm | bg-stone-50 | text-stone-900 | orange-700 | white | stone-500 | stone-200 |
 
 Theme classes passed to section renderers via a `ThemeClasses` object.
@@ -119,6 +119,7 @@ interface TemplateContent {
   services?: ServiceItem[]
   process?: ProcessStep[]
   faq?: FAQItem[]
+  beforeAfter?: BeforeAfterItem[]
   bookingUrl?: string
   bookingText?: string
 
@@ -157,6 +158,7 @@ interface HoursEntry { day: string; hours: string }
 interface ScheduleItem { time: string; title: string; speaker?: string; description?: string }
 interface Speaker { name: string; topic: string; bio: string }
 interface StatItem { value: string; label: string }
+interface BeforeAfterItem { label: string; before: string; after: string }
 ```
 
 ## Styling Approach
@@ -196,6 +198,7 @@ HTML document shell:
 - Describe all content fields with which templates use them
 - Increase max_tokens from 2048 to 4096
 - Template selection rules: food business -> restaurant, event/course -> event, creative studio -> agency, any service provider -> services, default -> landing
+- Update fallback template ID from `'landing-light'` to `'landing'`
 
 ## Block Editor Changes
 
@@ -204,8 +207,24 @@ HTML document shell:
 
 ## Backward Compatibility
 
-- Extend `resolveThemeId()` to map old template IDs: landing-light -> landing, landing-dark -> landing, portfolio-minimal -> agency, portfolio-bold -> agency-editorial
-- `renderFromBlocks()` detects inline-style blocks (old projects) and wraps in CSS variable shell; new projects get Tailwind shell
+### Template ID resolution
+Add a `resolveTemplateId()` function in `src/templates/types.ts` (separate from `resolveThemeId()` which handles theme IDs). This maps old template IDs to new ones:
+- `landing-light` -> `landing`
+- `landing-dark` -> `landing`
+- `portfolio-minimal` -> `agency`
+- `portfolio-bold` -> `agency-editorial`
+
+Update the generator fallback (line 90-93 in generator.ts) from `'landing-light'` to `'landing'`.
+
+### Old vs new block detection in renderFromBlocks()
+When `renderFromBlocks()` loads blocks from the DB, it must detect whether blocks use the old inline-style system or new Tailwind classes. Detection: check if any block's HTML contains `style="` with `var(--` — if so, it's an old project. Wrap old blocks in the legacy CSS variable shell (preserving `getThemeCSS()`). Wrap new blocks in the Tailwind CDN shell.
+
+### Block editor prompt bifurcation
+The block editor must detect whether the block being edited uses Tailwind classes or inline CSS variables, and use the appropriate prompt. Detection: if the block HTML contains `class="` with Tailwind utility patterns (e.g., `text-`, `bg-`, `rounded-`, `px-`, `py-`), use the Tailwind-aware prompt. Otherwise use the legacy inline-style prompt. This ensures edits on old projects don't break their styling.
+
+### Navbar mobile menu
+The Tailwind navbar will include an inline `onclick` handler for the mobile hamburger toggle (simple `document.getElementById('mobile-menu').classList.toggle('hidden')`). No external JS dependencies.
+
 - No database schema changes needed
 
 ## Files Changed
@@ -216,7 +235,7 @@ HTML document shell:
 - src/templates/portfolio-minimal.tsx
 - src/templates/portfolio-bold.tsx
 - src/templates/themes.ts
-- All 11 existing section files in src/templates/sections/
+- All 12 existing section files in src/templates/sections/
 
 ### Added:
 - 10 template files (one per template ID)
