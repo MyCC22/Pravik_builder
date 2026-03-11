@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     if (projectError) throw projectError
 
     // Voice server WebSocket URL (Media Streams endpoint)
-    const voiceServerUrl = process.env.VOICE_SERVER_WS_URL || 'wss://pravik-voice-server.up.railway.app/media-stream'
+    const voiceServerUrl = (process.env.VOICE_SERVER_WS_URL || 'wss://pravik-voice-server.up.railway.app/media-stream').trim()
 
     // Return Media Stream TwiML — connects call audio to voice server → OpenAI Realtime
     const twiml = generateMediaStreamTwiML({
