@@ -2,30 +2,25 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Copy voice-server package files
-COPY voice-server/package.json voice-server/package-lock.json* ./voice-server/
+# Copy package files
+COPY package.json package-lock.json* ./
 
-# Copy shared src for the build
-COPY src ./src
-COPY tsconfig.json ./tsconfig.json
-
-WORKDIR /app/voice-server
 RUN npm install
 
-# Copy voice-server source
-COPY voice-server/src ./src
-COPY voice-server/tsconfig.json ./tsconfig.json
+# Copy source
+COPY src ./src
+COPY tsconfig.json ./tsconfig.json
 
 RUN npm run build
 
 # Production stage
 FROM node:20-slim
 
-WORKDIR /app/voice-server
+WORKDIR /app
 
-COPY --from=builder /app/voice-server/dist ./dist
-COPY --from=builder /app/voice-server/package.json ./
-COPY --from=builder /app/voice-server/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
 
 ENV NODE_ENV=production
 ENV PORT=8080
