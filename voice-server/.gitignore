@@ -1,4 +1,10 @@
-node_modules
-dist
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
 .env
-.env.local
+dist/
+build/
+*.egg-info/
+node_modules/

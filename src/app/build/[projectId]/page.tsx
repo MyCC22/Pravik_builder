@@ -28,7 +28,7 @@ export default function BuilderPage() {
   }, [projectId])
 
   // Voice call session — subscribes to Supabase Realtime for live updates
-  const { isVoiceCall, callActive, voiceMessages } = useCallSession(
+  const { isVoiceCall, callActive, voiceMessages, broadcastWebAction } = useCallSession(
     callSid,
     refreshPreview
   )
@@ -165,6 +165,14 @@ export default function BuilderPage() {
           setPreviewUrl(`/api/builder/preview/${projectId}?t=${Date.now()}`)
         }
 
+        // Notify voice AI about web page actions during active voice calls
+        if (isVoiceCall && callActive && broadcastWebAction) {
+          broadcastWebAction('text_message_sent', {
+            message,
+            ...(imageUrls.length > 0 ? { imageUrls } : {}),
+          })
+        }
+
         const assistantMsg: Message = {
           id: `temp-assistant-${Date.now()}`,
           project_id: projectId,
@@ -187,7 +195,7 @@ export default function BuilderPage() {
         setLoading(false)
       }
     },
-    [projectId]
+    [projectId, isVoiceCall, callActive, broadcastWebAction]
   )
 
   const shareUrl = projectId
@@ -197,10 +205,11 @@ export default function BuilderPage() {
   return (
     <BuilderLayout
       preview={<PreviewPanel url={previewUrl} loading={loading} action={action} />}
-      chat={<ChatPanel messages={messages} onSend={handleSend} loading={loading} />}
+      chat={(collapsed) => <ChatPanel messages={messages} onSend={handleSend} loading={loading} collapsed={collapsed} />}
       shareUrl={shareUrl}
       isVoiceCall={isVoiceCall}
       callActive={callActive}
+      hasMessages={messages.length > 0}
     />
   )
 }

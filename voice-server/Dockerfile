@@ -1,30 +1,28 @@
-FROM node:20-slim AS builder
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json* ./
+# Install build deps for compiled packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN npm install
-
-# Copy source
-COPY src ./src
-COPY tsconfig.json ./tsconfig.json
-
-RUN npm run build
+COPY pyproject.toml ./
+RUN pip install --no-cache-dir .
 
 # Production stage
-FROM node:20-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/node_modules ./node_modules
+# Copy installed packages from builder
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
-ENV NODE_ENV=production
+# Copy application code
+COPY src ./src
+
 ENV PORT=8080
-
 EXPOSE 8080
 
-CMD ["node", "dist/index.js"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8080"]

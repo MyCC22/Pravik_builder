@@ -15,6 +15,7 @@ interface UseCallSessionReturn {
   callActive: boolean
   voiceMessages: VoiceMessage[]
   onPreviewUpdate: (() => void) | null
+  broadcastWebAction: ((actionType: string, data: Record<string, unknown>) => void) | null
 }
 
 export function useCallSession(
@@ -57,10 +58,23 @@ export function useCallSession(
     }
   }, [callSid, handlePreviewUpdate])
 
+  const broadcastWebAction = useCallback(
+    (actionType: string, data: Record<string, unknown>) => {
+      if (!channelRef.current) return
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'web_action',
+        payload: { actionType, ...data },
+      })
+    },
+    []
+  )
+
   return {
     isVoiceCall: !!callSid,
     callActive,
     voiceMessages,
     onPreviewUpdate: callSid ? handlePreviewUpdate : null,
+    broadcastWebAction: callSid ? broadcastWebAction : null,
   }
 }

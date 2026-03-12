@@ -9,40 +9,43 @@ interface ChatPanelProps {
   messages: Message[]
   onSend: (message: string, images?: File[]) => void
   loading?: boolean
+  collapsed?: boolean
 }
 
-export function ChatPanel({ messages, onSend, loading }: ChatPanelProps) {
+export function ChatPanel({ messages, onSend, loading, collapsed }: ChatPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [messages])
+  }, [messages, collapsed])
 
   return (
     <div className="flex flex-col h-full">
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
-        {messages.length === 0 && (
-          <p className="text-center text-gray-600 text-xs mt-2">
-            Send a message to start building
-          </p>
-        )}
-        {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} />
-        ))}
-        {loading && (
-          <div className="flex justify-start">
-            <div className="bg-white/10 rounded-2xl rounded-bl-md px-4 py-2">
-              <div className="flex gap-1">
-                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+      {!collapsed && (
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
+          {messages.length === 0 && (
+            <p className="text-center text-gray-600 text-xs mt-2">
+              Send a message to start building
+            </p>
+          )}
+          {messages.map((msg) => (
+            <MessageBubble key={msg.id} message={msg} />
+          ))}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="bg-white/10 rounded-2xl rounded-bl-md px-4 py-2">
+                <div className="flex gap-1">
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       <PromptBar onSend={onSend} disabled={loading} />
     </div>
