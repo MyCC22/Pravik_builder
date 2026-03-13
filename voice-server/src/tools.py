@@ -8,9 +8,17 @@ from typing import Any, Callable
 import httpx
 from pipecat.services.llm_service import FunctionCallParams
 
-from src.services.builder_api import call_builder_api, fetch_site_state
-from src.services.call_session import save_call_message, update_call_state
-from src.services.realtime import broadcast_preview_update
+from src.services.builder_api import call_builder_api, fetch_site_state, fetch_user_projects
+from src.services.call_session import save_call_message, update_call_state, update_call_session_project
+from src.services.realtime import (
+    broadcast_preview_update,
+    broadcast_project_selected,
+    broadcast_open_action_menu,
+    broadcast_close_action_menu,
+    broadcast_step_completed,
+)
+from src.services.supabase_client import get_supabase_client
+from src.services.twilio_phone import provision_phone_number
 from src.services.twilio_sms import send_sms
 
 logger = logging.getLogger(__name__)
@@ -23,6 +31,9 @@ _AUTO_YES_PATTERNS = [
     "should i add",
     "would you like me to add",
 ]
+
+# Valid step IDs for the action steps menu
+_VALID_STEP_IDS = {"build_site", "contact_form", "phone_number"}
 
 # OpenAI Realtime tool definitions
 TOOLS = [
@@ -92,6 +103,26 @@ TOOLS = [
     },
     {
         "type": "function",
+        "name": "setup_phone_number",
+        "description": (
+            "Provision a dedicated business phone number for the website. "
+            "Call this when the user agrees to get a phone number for their website. "
+            "The number will forward calls to the user's real phone. "
+            "Ask the user what area code they want before calling this tool."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "area_code": {
+                    "type": "string",
+                    "description": "The 3-digit US area code (e.g. '512' for Austin, '415' for SF, '212' for NYC)",
+                },
+            },
+            "required": ["area_code"],
+        },
+    },
+    {
+        "type": "function",
         "name": "change_theme",
         "description": (
             "Change the color theme of the website. Available themes: clean (professional light), "
@@ -112,6 +143,86 @@ TOOLS = [
             "required": ["request"],
         },
     },
+    {
+        "type": "function",
+        "name": "open_action_menu",
+        "description": (
+            "Open the action steps checklist on the user's phone screen. "
+            "Call this after the website is built to show available next steps."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "type": "function",
+        "name": "close_action_menu",
+        "description": (
+            "Close the action steps checklist on the user's phone. "
+            "Call this when the user is done browsing steps or all available steps are complete."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "type": "function",
+        "name": "complete_action_step",
+        "description": (
+            "Mark a step as completed in the action steps checklist. "
+            "Call this after successfully completing a step (e.g. after adding a contact form "
+            "or provisioning a phone number). The drawer stays open so the user can pick the next step."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "step_id": {
+                    "type": "string",
+                    "description": "The step ID to mark as complete: 'contact_form', 'phone_number', etc.",
+                },
+            },
+            "required": ["step_id"],
+        },
+    },
+]
+
+# Additional tools only available for returning users with existing projects
+RETURNING_USER_TOOLS = [
+    {
+        "type": "function",
+        "name": "select_project",
+        "description": (
+            "Load an existing project so you can continue editing it. "
+            "Call this when the user wants to continue with a specific project. "
+            "The project's current content will be loaded."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "project_id": {
+                    "type": "string",
+                    "description": "The ID of the project to load.",
+                },
+            },
+            "required": ["project_id"],
+        },
+    },
+    {
+        "type": "function",
+        "name": "create_new_project",
+        "description": (
+            "Create a brand new empty project to start building from scratch. "
+            "Call this when the returning user wants to build a new website "
+            "instead of continuing with an existing one."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "type": "function",
+        "name": "list_user_projects",
+        "description": (
+            "List all the user's existing websites with their names. "
+            "Call this when the user wants to know what websites they have, "
+            "or when they want to switch to a different project."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
 ]
 
 
@@ -130,6 +241,11 @@ class ToolContext:
     page_opened: bool = False
     llm_ref: Any = None
     last_edit_summary: str = ""
+    # Returning user fields
+    is_new_user: bool = True
+    project_count: int = 0
+    latest_project_id: str = ""
+    latest_project_name: str = ""
 
 
 def create_tool_handlers(ctx: ToolContext) -> dict[str, Callable]:
@@ -310,6 +426,29 @@ def create_tool_handlers(ctx: ToolContext) -> dict[str, Callable]:
             await update_call_state(ctx.call_sid, "follow_up")
             await params.result_callback({"message": result.get("message", "Website built!")})
 
+            # Broadcast step completion + open menu
+            asyncio.create_task(broadcast_step_completed(ctx.call_sid, "build_site"))
+            asyncio.create_task(broadcast_open_action_menu(ctx.call_sid))
+
+            # Auto-name the project from the build description
+            if description:
+                async def _auto_name():
+                    try:
+                        # Use first ~50 chars of description as project name
+                        name = description.strip()[:50].strip()
+                        if name:
+                            supabase = await get_supabase_client()
+                            await (
+                                supabase.table("projects")
+                                .update({"name": name})
+                                .eq("id", ctx.project_id)
+                                .execute()
+                            )
+                            logger.info(f"[{ctx.call_sid}] Auto-named project: {name}")
+                    except Exception as e:
+                        logger.warning(f"[{ctx.call_sid}] Failed to auto-name project: {e}")
+                asyncio.create_task(_auto_name())
+
             # Inject site state so AI knows what's on the page
             asyncio.create_task(_inject_site_context())
         except Exception as err:
@@ -342,8 +481,12 @@ def create_tool_handlers(ctx: ToolContext) -> dict[str, Callable]:
                     )
                 })
                 return
+            had_booking_before = any(
+                t.get("tool_type") == "booking"
+                for t in state.get("tools", [])
+            )
         except Exception:
-            pass  # Non-critical — proceed with edit
+            had_booking_before = False  # Non-critical — proceed with edit
 
         # Always include last edit context as a hint for the builder API.
         # The builder has its own message history too — this is additive,
@@ -418,6 +561,20 @@ def create_tool_handlers(ctx: ToolContext) -> dict[str, Callable]:
             )
 
             ctx.last_edit_summary = f"{instruction} -> {result.get('message', '')}"
+
+            # Check if a contact form was just added
+            if not had_booking_before:
+                try:
+                    new_state = await fetch_site_state(ctx.project_id)
+                    has_booking_now = any(
+                        t.get("tool_type") == "booking"
+                        for t in new_state.get("tools", [])
+                    )
+                    if has_booking_now:
+                        await broadcast_step_completed(ctx.call_sid, "contact_form")
+                except Exception:
+                    pass  # Non-critical
+
             await params.result_callback({
                 "message": (
                     f"{result.get('message', 'Changes applied!')} "
@@ -432,6 +589,91 @@ def create_tool_handlers(ctx: ToolContext) -> dict[str, Callable]:
             await params.result_callback(
                 {"message": "Sorry, there was an error making that change. Please try again."}
             )
+
+    async def handle_setup_phone_number(params: FunctionCallParams):
+        area_code = params.arguments.get("area_code", "").strip()
+        if not area_code or len(area_code) != 3 or not area_code.isdigit():
+            await params.result_callback({
+                "message": "I need a valid 3-digit US area code. Ask the user for their preferred area code."
+            })
+            return
+
+        try:
+            # Build the call-forward webhook URL
+            webhook_url = f"{ctx.builder_api_url}/api/webhooks/twilio/call-forward"
+
+            # Provision the number via Twilio
+            result = await provision_phone_number(area_code, webhook_url)
+            phone_number = result["phone_number"]
+            phone_sid = result["phone_sid"]
+
+            # Save to the projects table
+            supabase = await get_supabase_client()
+            await (
+                supabase.table("projects")
+                .update({
+                    "provisioned_phone": phone_number,
+                    "provisioned_phone_sid": phone_sid,
+                })
+                .eq("id", ctx.project_id)
+                .execute()
+            )
+
+            # Format number for display (e.g. +15125551234 -> (512) 555-1234)
+            digits = phone_number.lstrip("+1")
+            display_number = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+
+            # Add the phone number to the website via edit_website
+            edit_instruction = (
+                f"Add the business phone number {display_number} to the website. "
+                f"Display it prominently in the contact section and in the footer. "
+                f"Make it clickable (tel: link)."
+            )
+            try:
+                edit_result = await _call_api_with_retry(edit_instruction)
+                await broadcast_preview_update(
+                    ctx.call_sid,
+                    action=edit_result.get("action", "edited"),
+                    message=edit_result.get("message", ""),
+                    project_id=ctx.project_id,
+                )
+            except Exception as edit_err:
+                logger.warning(f"[{ctx.call_sid}] Failed to add phone to website: {edit_err}")
+
+            await save_call_message(
+                call_session_id=ctx.session_id,
+                role="assistant",
+                content=f"Provisioned phone number {display_number} for project {ctx.project_id}",
+                intent="setup_phone_number",
+            )
+
+            await params.result_callback({
+                "message": (
+                    f"Phone number provisioned successfully! The new business number is "
+                    f"{display_number}. It has been added to the website and will forward "
+                    f"calls to the user's phone at {ctx.phone_number}. "
+                    f"Tell the user their new number and that it's already on their website."
+                )
+            })
+
+            # Mark phone number step as completed
+            asyncio.create_task(broadcast_step_completed(ctx.call_sid, "phone_number"))
+
+            # Refresh site context
+            asyncio.create_task(_inject_site_context())
+        except ValueError as ve:
+            logger.warning(f"[{ctx.call_sid}] Phone provision error: {ve}")
+            await params.result_callback({
+                "message": (
+                    f"Sorry, no phone numbers are available in area code {area_code}. "
+                    f"Ask the user if they'd like to try a different area code."
+                )
+            })
+        except Exception as err:
+            logger.error(f"[{ctx.call_sid}] Phone provision failed: {err}", exc_info=True)
+            await params.result_callback({
+                "message": "Sorry, there was an error setting up the phone number. Please try again."
+            })
 
     async def handle_change_theme(params: FunctionCallParams):
         request = params.arguments.get("request", "")
@@ -459,9 +701,185 @@ def create_tool_handlers(ctx: ToolContext) -> dict[str, Callable]:
                 {"message": "Sorry, there was an error changing the theme. Please try again."}
             )
 
-    return {
+    # ------------------------------------------------------------------
+    # Action steps menu tools
+    # ------------------------------------------------------------------
+
+    async def handle_open_action_menu(params: FunctionCallParams):
+        try:
+            await broadcast_open_action_menu(ctx.call_sid)
+            await params.result_callback({
+                "message": "The action steps menu is now visible on the user's phone. "
+                "Guide them through the available steps."
+            })
+        except Exception as err:
+            logger.error(f"[{ctx.call_sid}] open_action_menu failed: {err}")
+            await params.result_callback({"message": "Menu opened."})
+
+    async def handle_close_action_menu(params: FunctionCallParams):
+        try:
+            await broadcast_close_action_menu(ctx.call_sid)
+            await params.result_callback({
+                "message": "The action steps menu has been closed."
+            })
+        except Exception as err:
+            logger.error(f"[{ctx.call_sid}] close_action_menu failed: {err}")
+            await params.result_callback({"message": "Menu closed."})
+
+    async def handle_complete_action_step(params: FunctionCallParams):
+        step_id = params.arguments.get("step_id", "").strip()
+        if step_id not in _VALID_STEP_IDS:
+            await params.result_callback({
+                "message": f"Invalid step_id '{step_id}'. Valid IDs are: {', '.join(sorted(_VALID_STEP_IDS))}"
+            })
+            return
+
+        try:
+            await broadcast_step_completed(ctx.call_sid, step_id)
+            await params.result_callback({
+                "message": f"Step '{step_id}' marked as completed in the action steps menu."
+            })
+        except Exception as err:
+            logger.error(f"[{ctx.call_sid}] complete_action_step failed: {err}")
+            await params.result_callback({"message": f"Step '{step_id}' completed."})
+
+    # ------------------------------------------------------------------
+    # Returning user tools (project selection)
+    # ------------------------------------------------------------------
+
+    async def handle_select_project(params: FunctionCallParams):
+        project_id = params.arguments.get("project_id", "").strip()
+        if not project_id:
+            await params.result_callback({
+                "message": "I need a project ID. Call list_user_projects first to get the IDs."
+            })
+            return
+
+        try:
+            # Update context
+            ctx.project_id = project_id
+            await update_call_session_project(ctx.call_sid, project_id)
+
+            # Broadcast to frontend so dashboard navigates to builder
+            await broadcast_project_selected(ctx.call_sid, project_id)
+
+            # Inject site state so AI knows what's on the page
+            state = await fetch_site_state(project_id)
+            blocks = state.get("blocks", [])
+            tools_data = state.get("tools", [])
+
+            block_list = ", ".join(b["block_type"] for b in blocks) if blocks else "empty"
+            tool_summary = ""
+            for t in tools_data:
+                if t.get("tool_type") == "booking":
+                    cfg = t.get("config") or {}
+                    fields = ", ".join(f.get("label", f.get("name", "?")) for f in cfg.get("fields", []))
+                    tool_summary = f" Booking form: title=\"{cfg.get('title', '')}\", fields=[{fields}]."
+
+            summary_msg = (
+                f"Project loaded successfully. Current sections: {block_list}.{tool_summary} "
+                f"Tell the user their site is loaded and ask what they'd like to change or update."
+            )
+
+            await save_call_message(
+                call_session_id=ctx.session_id,
+                role="system",
+                content=f"Loaded project {project_id} with sections: {block_list}",
+            )
+
+            await params.result_callback({"message": summary_msg})
+
+            # Also inject as silent context for future reference
+            asyncio.create_task(_inject_site_context())
+        except Exception as err:
+            logger.error(f"[{ctx.call_sid}] select_project failed: {err}", exc_info=True)
+            await params.result_callback({
+                "message": "Sorry, I had trouble loading that project. Please try again."
+            })
+
+    async def handle_create_new_project(params: FunctionCallParams):
+        try:
+            supabase = await get_supabase_client()
+            resp = await (
+                supabase.table("projects")
+                .insert({
+                    "user_id": ctx.user_id,
+                    "name": f"Voice Build {__import__('datetime').date.today().strftime('%m/%d/%Y')}",
+                    "source": "voice",
+                })
+                .select()
+                .single()
+                .execute()
+            )
+            new_project = resp.data
+            ctx.project_id = new_project["id"]
+            await update_call_session_project(ctx.call_sid, new_project["id"])
+
+            # Broadcast so frontend navigates to the new project
+            await broadcast_project_selected(ctx.call_sid, new_project["id"])
+
+            await save_call_message(
+                call_session_id=ctx.session_id,
+                role="system",
+                content=f"Created new project {new_project['id']}",
+            )
+
+            await params.result_callback({
+                "message": (
+                    "New project created! Ask the user what kind of website they want to build. "
+                    "Get excited and help them brainstorm!"
+                )
+            })
+        except Exception as err:
+            logger.error(f"[{ctx.call_sid}] create_new_project failed: {err}", exc_info=True)
+            await params.result_callback({
+                "message": "Sorry, I had trouble creating a new project. Please try again."
+            })
+
+    async def handle_list_user_projects(params: FunctionCallParams):
+        try:
+            projects = await fetch_user_projects(ctx.user_id)
+            if not projects:
+                await params.result_callback({
+                    "message": "The user has no existing websites. Offer to build a new one!"
+                })
+                return
+
+            lines = []
+            for i, p in enumerate(projects, 1):
+                name = p.get("name", "Untitled")
+                pid = p["id"]
+                lines.append(f"{i}. {name} (ID: {pid})")
+
+            project_list = "\n".join(lines)
+            await params.result_callback({
+                "message": (
+                    f"The user has {len(projects)} website(s):\n{project_list}\n\n"
+                    f"Read the list to the user naturally (just names, not IDs). "
+                    f"When they pick one, call select_project with that project's ID."
+                )
+            })
+        except Exception as err:
+            logger.error(f"[{ctx.call_sid}] list_user_projects failed: {err}", exc_info=True)
+            await params.result_callback({
+                "message": "Sorry, I couldn't retrieve the project list. Please try again."
+            })
+
+    handlers = {
         "send_builder_link": handle_send_builder_link,
         "build_website": handle_build_website,
         "edit_website": handle_edit_website,
+        "setup_phone_number": handle_setup_phone_number,
         "change_theme": handle_change_theme,
+        "open_action_menu": handle_open_action_menu,
+        "close_action_menu": handle_close_action_menu,
+        "complete_action_step": handle_complete_action_step,
     }
+
+    # Add returning user tools if they have existing projects
+    if ctx.project_count > 0:
+        handlers["select_project"] = handle_select_project
+        handlers["create_new_project"] = handle_create_new_project
+        handlers["list_user_projects"] = handle_list_user_projects
+
+    return handlers
