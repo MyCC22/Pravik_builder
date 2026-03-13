@@ -1,6 +1,6 @@
 """Tests for build_system_instructions and build_initial_greeting — pure functions."""
 
-from src.pipeline import build_system_instructions, build_initial_greeting
+from src.prompts import build_system_instructions, build_initial_greeting
 
 
 def test_new_user_instructions_contain_send_link():
@@ -23,10 +23,21 @@ def test_returning_multi_includes_count():
     assert "3" in result
 
 
-def test_all_prompts_include_common_rules():
+def test_all_prompts_include_general_rules():
+    """All prompts should include general rules (critical rules, noise handling, web sync)."""
     for args in [(True, 0, ""), (False, 1, "X"), (False, 5, "X")]:
         result = build_system_instructions(*args)
-        assert "ACTION STEPS MENU" in result
+        assert "CRITICAL RULES" in result
+        assert "NOISE HANDLING" in result
+
+
+def test_tool_instructions_included_when_provided():
+    """Tool-specific instructions are included when passed."""
+    result = build_system_instructions(
+        is_new_user=True, project_count=0, latest_project_name="",
+        tool_instructions="ACTION STEPS MENU:\n- Do something"
+    )
+    assert "ACTION STEPS MENU" in result
 
 
 def test_all_prompts_include_timmy():

@@ -19,7 +19,7 @@ from src.services.realtime import (
     inject_web_context_into_llm,
     subscribe_to_call_channel,
 )
-from src.tools import ToolContext
+from src.tools import CallIdentity, CallState, TurnContext, ToolContext
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -120,11 +120,11 @@ async def media_stream(websocket: WebSocket):
         def _on_page_opened():
             # Only inject context on the FIRST page open — subsequent events
             # are just page refreshes and should not trigger AI speech.
-            if tool_ctx.page_opened:
+            if tool_ctx.state.page_opened:
                 logger.info(f"[{call_sid}] Page refresh detected — ignoring (already opened)")
                 return
             logger.info(f"[{call_sid}] Page opened by user (first time)")
-            tool_ctx.page_opened = True
+            tool_ctx.state.mark_page_opened()
             if _llm_ref[0]:
                 asyncio.create_task(
                     inject_web_context_into_llm(
@@ -140,14 +140,14 @@ async def media_stream(websocket: WebSocket):
                 image_urls = payload.get("imageUrls", [])
 
                 if image_urls:
-                    tool_ctx.pending_image_urls.extend(image_urls)
+                    tool_ctx.turn.pending_image_urls.extend(image_urls)
                     logger.info(f"[{call_sid}] Stored {len(image_urls)} pending image URLs")
 
                 # Handle project selection from dashboard
                 if action_type == "project_selected_from_web":
                     selected_id = payload.get("projectId", "")
                     if selected_id:
-                        tool_ctx.project_id = selected_id
+                        tool_ctx.state.switch_project(selected_id)
                         logger.info(f"[{call_sid}] Project selected from web: {selected_id}")
 
                 asyncio.create_task(
@@ -162,16 +162,21 @@ async def media_stream(websocket: WebSocket):
 
         # --- Build and run Pipecat pipeline ---
         tool_ctx = ToolContext(
-            call_sid=call_sid,
-            session_id=session_id,
-            user_id=user_id,
-            project_id=project_id,
-            phone_number=phone_number,
-            builder_api_url=config.builder_api_url,
-            is_new_user=is_new_user,
-            project_count=project_count,
-            latest_project_id=latest_project_id,
-            latest_project_name=latest_project_name,
+            identity=CallIdentity(
+                call_sid=call_sid,
+                session_id=session_id,
+                user_id=user_id,
+                phone_number=phone_number,
+                builder_api_url=config.builder_api_url,
+                is_new_user=is_new_user,
+            ),
+            state=CallState(
+                _project_id=project_id,
+                project_count=project_count,
+                latest_project_id=latest_project_id,
+                latest_project_name=latest_project_name,
+            ),
+            turn=TurnContext(),
         )
 
         task, runner, llm, recorder = create_pipeline(websocket, stream_sid, call_sid, tool_ctx)

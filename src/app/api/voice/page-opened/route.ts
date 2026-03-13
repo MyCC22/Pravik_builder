@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/services/supabase/client'
+import { CALL_EVENTS } from '@/lib/events/call-events'
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
     const channel = supabase.channel(`call:${callSid}`)
     await channel.send({
       type: 'broadcast',
-      event: 'page_opened',
+      event: CALL_EVENTS.PAGE_OPENED,
       payload: { timestamp: Date.now() },
     })
 

@@ -3,19 +3,21 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { getSupabaseBrowser } from '@/services/supabase/browser'
 import type { RealtimeChannel } from '@supabase/supabase-js'
-
-interface VoiceMessage {
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: number
-}
+import {
+  CALL_EVENTS,
+  WEB_ACTION_TYPES,
+  type VoiceMessagePayload,
+  type ProjectSelectedPayload,
+  type StepCompletedPayload,
+  type WebActionType,
+} from '@/lib/events/call-events'
 
 export interface UseCallSessionReturn {
   isVoiceCall: boolean
   callActive: boolean
-  voiceMessages: VoiceMessage[]
+  voiceMessages: VoiceMessagePayload[]
   onPreviewUpdate: (() => void) | null
-  broadcastWebAction: ((actionType: string, data: Record<string, unknown>) => void) | null
+  broadcastWebAction: ((actionType: WebActionType, data: Record<string, unknown>) => void) | null
 }
 
 export interface UseCallSessionOptions {
@@ -31,7 +33,7 @@ export function useCallSession(
   options?: UseCallSessionOptions,
 ): UseCallSessionReturn {
   const [callActive, setCallActive] = useState(!!callSid)
-  const [voiceMessages, setVoiceMessages] = useState<VoiceMessage[]>([])
+  const [voiceMessages, setVoiceMessages] = useState<VoiceMessagePayload[]>([])
   const channelRef = useRef<RealtimeChannel | null>(null)
 
   // Store options in a ref so the channel subscription doesn't re-run when callbacks change
@@ -51,35 +53,35 @@ export function useCallSession(
     const channel = supabase.channel(`call:${callSid}`)
 
     channel
-      .on('broadcast', { event: 'preview_updated' }, (payload) => {
+      .on('broadcast', { event: CALL_EVENTS.PREVIEW_UPDATED }, (payload) => {
         console.log('Preview updated:', payload)
         handlePreviewUpdate()
       })
-      .on('broadcast', { event: 'voice_message' }, (payload) => {
-        const msg = payload.payload as VoiceMessage
+      .on('broadcast', { event: CALL_EVENTS.VOICE_MESSAGE }, (payload) => {
+        const msg = payload.payload as VoiceMessagePayload
         setVoiceMessages((prev) => [...prev, msg])
       })
-      .on('broadcast', { event: 'project_selected' }, (payload) => {
-        const projectId = payload.payload?.projectId
+      .on('broadcast', { event: CALL_EVENTS.PROJECT_SELECTED }, (payload) => {
+        const { projectId } = payload.payload as ProjectSelectedPayload
         if (projectId) {
           console.log(`Project switched to: ${projectId}`)
           optionsRef.current?.onProjectSwitched?.(projectId)
         }
       })
-      .on('broadcast', { event: 'call_ended' }, () => {
+      .on('broadcast', { event: CALL_EVENTS.CALL_ENDED }, () => {
         setCallActive(false)
       })
       // Action steps menu events
-      .on('broadcast', { event: 'open_action_menu' }, () => {
+      .on('broadcast', { event: CALL_EVENTS.OPEN_ACTION_MENU }, () => {
         console.log('Action menu: open')
         optionsRef.current?.onActionMenuOpen?.()
       })
-      .on('broadcast', { event: 'close_action_menu' }, () => {
+      .on('broadcast', { event: CALL_EVENTS.CLOSE_ACTION_MENU }, () => {
         console.log('Action menu: close')
         optionsRef.current?.onActionMenuClose?.()
       })
-      .on('broadcast', { event: 'step_completed' }, (payload) => {
-        const stepId = payload.payload?.stepId
+      .on('broadcast', { event: CALL_EVENTS.STEP_COMPLETED }, (payload) => {
+        const { stepId } = payload.payload as StepCompletedPayload
         if (stepId) {
           console.log(`Step completed: ${stepId}`)
           optionsRef.current?.onStepCompleted?.(stepId)
@@ -100,11 +102,11 @@ export function useCallSession(
   }, [callSid, handlePreviewUpdate])
 
   const broadcastWebAction = useCallback(
-    (actionType: string, data: Record<string, unknown>) => {
+    (actionType: WebActionType, data: Record<string, unknown>) => {
       if (!channelRef.current) return
       channelRef.current.send({
         type: 'broadcast',
-        event: 'web_action',
+        event: CALL_EVENTS.WEB_ACTION,
         payload: { actionType, ...data },
       })
     },

@@ -13,6 +13,7 @@ Key mock insight: get_supabase_client() is async, but the returned client's
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from src.events import CallEvent
 from src.services.realtime import (
     _channels,
     broadcast_preview_update,
@@ -71,7 +72,7 @@ async def test_broadcast_preview_update_event_and_payload(mock_supabase):
 
     mock_supabase.send_broadcast.assert_awaited_once()
     event, payload = mock_supabase.send_broadcast.call_args.args
-    assert event == "preview_updated"
+    assert event == CallEvent.PREVIEW_UPDATED
     assert payload["action"] == "generated"
     assert payload["message"] == "Website built!"
     assert payload["projectId"] == "proj-1"
@@ -96,7 +97,7 @@ async def test_broadcast_step_completed_payload(mock_supabase):
 
     mock_supabase.send_broadcast.assert_awaited_once()
     event, payload = mock_supabase.send_broadcast.call_args.args
-    assert event == "step_completed"
+    assert event == CallEvent.STEP_COMPLETED
     assert payload["stepId"] == "contact_form"
     assert "timestamp" in payload
 
@@ -110,7 +111,7 @@ async def test_broadcast_open_action_menu_event(mock_supabase):
 
     mock_supabase.send_broadcast.assert_awaited_once()
     event, payload = mock_supabase.send_broadcast.call_args.args
-    assert event == "open_action_menu"
+    assert event == CallEvent.OPEN_ACTION_MENU
     assert "timestamp" in payload
 
 
@@ -123,7 +124,7 @@ async def test_broadcast_close_action_menu_event(mock_supabase):
 
     mock_supabase.send_broadcast.assert_awaited_once()
     event, payload = mock_supabase.send_broadcast.call_args.args
-    assert event == "close_action_menu"
+    assert event == CallEvent.CLOSE_ACTION_MENU
     assert "timestamp" in payload
 
 
@@ -136,7 +137,7 @@ async def test_broadcast_project_selected_payload(mock_supabase):
 
     mock_supabase.send_broadcast.assert_awaited_once()
     event, payload = mock_supabase.send_broadcast.call_args.args
-    assert event == "project_selected"
+    assert event == CallEvent.PROJECT_SELECTED
     assert payload["projectId"] == "proj-42"
     assert "timestamp" in payload
 
@@ -150,7 +151,7 @@ async def test_broadcast_call_ended_event(mock_supabase):
 
     mock_supabase.send_broadcast.assert_awaited_once()
     event, payload = mock_supabase.send_broadcast.call_args.args
-    assert event == "call_ended"
+    assert event == CallEvent.CALL_ENDED
     assert "timestamp" in payload
 
 
@@ -163,7 +164,7 @@ async def test_broadcast_voice_message_payload(mock_supabase):
 
     mock_supabase.send_broadcast.assert_awaited_once()
     event, payload = mock_supabase.send_broadcast.call_args.args
-    assert event == "voice_message"
+    assert event == CallEvent.VOICE_MESSAGE
     assert payload["role"] == "user"
     assert payload["content"] == "Hello there"
     assert "timestamp" in payload

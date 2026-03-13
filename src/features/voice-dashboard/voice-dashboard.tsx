@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSupabaseBrowser } from '@/services/supabase/browser'
+import { CALL_EVENTS, WEB_ACTION_TYPES } from '@/lib/events/call-events'
 import { VoiceProjectCard } from './voice-project-card'
 
 interface DashboardProject {
@@ -43,19 +44,19 @@ export function VoiceDashboard({
     const channel = supabase.channel(`call:${callSid}`)
 
     channel
-      .on('broadcast', { event: 'project_selected' }, (payload) => {
+      .on('broadcast', { event: CALL_EVENTS.PROJECT_SELECTED }, (payload) => {
         const projectId = payload.payload?.projectId
         if (projectId) {
           router.push(`/build/${projectId}?session=${callSid}`)
         }
       })
-      .on('broadcast', { event: 'preview_updated' }, (payload) => {
+      .on('broadcast', { event: CALL_EVENTS.PREVIEW_UPDATED }, (payload) => {
         const projectId = payload.payload?.projectId
         if (projectId) {
           router.push(`/build/${projectId}?session=${callSid}`)
         }
       })
-      .on('broadcast', { event: 'call_ended' }, () => {
+      .on('broadcast', { event: CALL_EVENTS.CALL_ENDED }, () => {
         setCallActive(false)
       })
       .subscribe()
@@ -73,7 +74,7 @@ export function VoiceDashboard({
         if (status === 'SUBSCRIBED') {
           channel.send({
             type: 'broadcast',
-            event: 'web_action',
+            event: CALL_EVENTS.WEB_ACTION,
             payload: { actionType, ...data },
           })
         }
@@ -85,7 +86,7 @@ export function VoiceDashboard({
   const handleProjectClick = useCallback(
     (projectId: string) => {
       setNavigating(projectId)
-      broadcastAction('project_selected_from_web', { projectId })
+      broadcastAction(WEB_ACTION_TYPES.PROJECT_SELECTED_FROM_WEB, { projectId })
       // Navigate directly — the voice AI will catch up
       setTimeout(() => {
         router.push(`/build/${projectId}?session=${callSid}`)
@@ -96,7 +97,7 @@ export function VoiceDashboard({
 
   const handleNewProject = useCallback(() => {
     setNavigating('new')
-    broadcastAction('new_project_requested')
+    broadcastAction(WEB_ACTION_TYPES.NEW_PROJECT_REQUESTED)
     // Wait for voice server to create project and broadcast project_selected
     // The realtime listener above will handle navigation
   }, [broadcastAction])

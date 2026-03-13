@@ -1,22 +1,19 @@
-"""Tier 3 tests for tool handlers created by src.tools.create_tool_handlers.
+"""Tier 3 tests for tool handlers — direct handler testing.
 
-Each handler is an async function that receives a FunctionCallParams-like
-object with .arguments (dict) and .result_callback (async callable).
+Each handler has signature: async def handle(ctx: ToolContext, params)
+where params has .arguments (dict) and .result_callback (async callable).
 
-We test the handlers by:
+We test handlers by:
 1. Creating a ToolContext with test values
-2. Calling create_tool_handlers(ctx) to get the handler dict
-3. Patching broadcast functions and get_supabase_client at their import paths
-4. Calling individual handlers with mock params and asserting behavior
-
-Key mock insight: get_supabase_client() is async, but the returned Supabase
-client's .table(), .update(), .eq() are synchronous. Only .execute() is async.
+2. Importing the handle function directly from the tool module
+3. Patching service imports at the tool module path
+4. Calling handle(ctx, params) and asserting behavior
 """
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from src.tools import ToolContext, create_tool_handlers
+from src.tools._base import CallIdentity, CallState, TurnContext, ToolContext
 
 
 # ---------------------------------------------------------------------------
@@ -32,18 +29,39 @@ class MockParams:
         self.result_callback = AsyncMock()
 
 
+# Keys that belong to each sub-object
+_IDENTITY_KEYS = {"call_sid", "session_id", "user_id", "phone_number", "builder_api_url", "is_new_user"}
+_STATE_KEYS = {"project_id", "project_count", "latest_project_id", "latest_project_name"}
+
+
 def _make_ctx(**overrides) -> ToolContext:
     """Create a ToolContext with sensible test defaults."""
-    defaults = dict(
+    identity_defaults = dict(
         call_sid="test-call",
         session_id="test-session",
         user_id="test-user",
-        project_id="test-project",
         phone_number="+15551234567",
         builder_api_url="http://localhost:3000",
+        is_new_user=True,
     )
-    defaults.update(overrides)
-    return ToolContext(**defaults)
+    state_defaults = dict(
+        _project_id="test-project",
+    )
+
+    # Route overrides to the right sub-object
+    for k, v in overrides.items():
+        if k in _IDENTITY_KEYS:
+            identity_defaults[k] = v
+        elif k == "project_id":
+            state_defaults["_project_id"] = v
+        elif k in _STATE_KEYS:
+            state_defaults[k] = v
+
+    return ToolContext(
+        identity=CallIdentity(**identity_defaults),
+        state=CallState(**state_defaults),
+        turn=TurnContext(),
+    )
 
 
 def _make_chain_mock(data=None):
@@ -62,14 +80,6 @@ def _make_chain_mock(data=None):
     return mock_client, mock_table
 
 
-def _patch_supabase_for_tools(mock_client):
-    """Patch get_supabase_client at the src.tools import path."""
-    async def fake_get_client():
-        return mock_client
-
-    return patch("src.tools.get_supabase_client", side_effect=fake_get_client)
-
-
 # ---------------------------------------------------------------------------
 # setup_call_forwarding
 # ---------------------------------------------------------------------------
@@ -77,18 +87,22 @@ def _patch_supabase_for_tools(mock_client):
 
 async def test_setup_call_forwarding_valid_number():
     """setup_call_forwarding saves forwarding_number to DB and broadcasts step_completed."""
+    from src.tools.setup_call_forwarding import handle
+
     ctx = _make_ctx()
-    handlers = create_tool_handlers(ctx)
     params = MockParams(arguments={"forwarding_number": "+15125559999"})
 
     mock_client, mock_table = _make_chain_mock()
 
+    async def fake_get_client():
+        return mock_client
+
     with (
-        _patch_supabase_for_tools(mock_client),
-        patch("src.tools.broadcast_step_completed", new_callable=AsyncMock) as mock_broadcast,
-        patch("src.tools.save_call_message", new_callable=AsyncMock),
+        patch("src.tools.setup_call_forwarding.get_supabase_client", side_effect=fake_get_client),
+        patch("src.tools.setup_call_forwarding.broadcast_step_completed", new_callable=AsyncMock) as mock_broadcast,
+        patch("src.tools.setup_call_forwarding.save_call_message", new_callable=AsyncMock),
     ):
-        await handlers["setup_call_forwarding"](params)
+        await handle(ctx, params)
 
     # Should have saved to projects table
     mock_client.table.assert_called_with("projects")
@@ -104,22 +118,17 @@ async def test_setup_call_forwarding_valid_number():
 
 async def test_setup_call_forwarding_empty_number():
     """setup_call_forwarding returns error if forwarding_number is empty."""
+    from src.tools.setup_call_forwarding import handle
+
     ctx = _make_ctx()
-    handlers = create_tool_handlers(ctx)
     params = MockParams(arguments={"forwarding_number": ""})
 
-    mock_client, _ = _make_chain_mock()
-
-    with _patch_supabase_for_tools(mock_client):
-        await handlers["setup_call_forwarding"](params)
+    await handle(ctx, params)
 
     # result_callback should indicate error
     params.result_callback.assert_awaited_once()
     result = params.result_callback.call_args.args[0]
     assert "need" in result["message"].lower()
-
-    # Should NOT have called table operations
-    mock_client.table.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -129,14 +138,15 @@ async def test_setup_call_forwarding_empty_number():
 
 async def test_complete_action_step_valid_id():
     """complete_action_step with valid step_id broadcasts step_completed."""
+    from src.tools.complete_action_step import handle
+
     ctx = _make_ctx()
-    handlers = create_tool_handlers(ctx)
     params = MockParams(arguments={"step_id": "contact_form"})
 
     with patch(
-        "src.tools.broadcast_step_completed", new_callable=AsyncMock
+        "src.tools.complete_action_step.broadcast_step_completed", new_callable=AsyncMock
     ) as mock_broadcast:
-        await handlers["complete_action_step"](params)
+        await handle(ctx, params)
 
     mock_broadcast.assert_awaited_once_with("test-call", "contact_form")
     params.result_callback.assert_awaited_once()
@@ -146,14 +156,15 @@ async def test_complete_action_step_valid_id():
 
 async def test_complete_action_step_invalid_id():
     """complete_action_step with invalid step_id returns error without broadcasting."""
+    from src.tools.complete_action_step import handle
+
     ctx = _make_ctx()
-    handlers = create_tool_handlers(ctx)
     params = MockParams(arguments={"step_id": "nonexistent_step"})
 
     with patch(
-        "src.tools.broadcast_step_completed", new_callable=AsyncMock
+        "src.tools.complete_action_step.broadcast_step_completed", new_callable=AsyncMock
     ) as mock_broadcast:
-        await handlers["complete_action_step"](params)
+        await handle(ctx, params)
 
     # Should NOT broadcast
     mock_broadcast.assert_not_awaited()
@@ -166,14 +177,15 @@ async def test_complete_action_step_invalid_id():
 
 async def test_complete_action_step_empty_id():
     """complete_action_step with empty step_id returns error."""
+    from src.tools.complete_action_step import handle
+
     ctx = _make_ctx()
-    handlers = create_tool_handlers(ctx)
     params = MockParams(arguments={"step_id": ""})
 
     with patch(
-        "src.tools.broadcast_step_completed", new_callable=AsyncMock
+        "src.tools.complete_action_step.broadcast_step_completed", new_callable=AsyncMock
     ) as mock_broadcast:
-        await handlers["complete_action_step"](params)
+        await handle(ctx, params)
 
     mock_broadcast.assert_not_awaited()
     params.result_callback.assert_awaited_once()
@@ -188,14 +200,15 @@ async def test_complete_action_step_empty_id():
 
 async def test_open_action_menu_broadcasts():
     """open_action_menu broadcasts open_action_menu event."""
+    from src.tools.open_action_menu import handle
+
     ctx = _make_ctx()
-    handlers = create_tool_handlers(ctx)
     params = MockParams()
 
     with patch(
-        "src.tools.broadcast_open_action_menu", new_callable=AsyncMock
+        "src.tools.open_action_menu.broadcast_open_action_menu", new_callable=AsyncMock
     ) as mock_broadcast:
-        await handlers["open_action_menu"](params)
+        await handle(ctx, params)
 
     mock_broadcast.assert_awaited_once_with("test-call")
     params.result_callback.assert_awaited_once()
@@ -210,14 +223,15 @@ async def test_open_action_menu_broadcasts():
 
 async def test_close_action_menu_broadcasts():
     """close_action_menu broadcasts close_action_menu event."""
+    from src.tools.close_action_menu import handle
+
     ctx = _make_ctx()
-    handlers = create_tool_handlers(ctx)
     params = MockParams()
 
     with patch(
-        "src.tools.broadcast_close_action_menu", new_callable=AsyncMock
+        "src.tools.close_action_menu.broadcast_close_action_menu", new_callable=AsyncMock
     ) as mock_broadcast:
-        await handlers["close_action_menu"](params)
+        await handle(ctx, params)
 
     mock_broadcast.assert_awaited_once_with("test-call")
     params.result_callback.assert_awaited_once()

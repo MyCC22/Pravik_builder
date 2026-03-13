@@ -7,6 +7,7 @@ import { PreviewPanel } from '@/features/builder/preview-panel'
 import { ChatPanel } from '@/features/builder/chat-panel'
 import { useSession } from '@/features/auth/use-session'
 import { useCallSession } from '@/hooks/use-call-session'
+import { WEB_ACTION_TYPES } from '@/lib/events/call-events'
 import type { Message, Project } from '@/lib/types'
 
 export default function BuilderPage() {
@@ -60,7 +61,7 @@ export default function BuilderPage() {
   const handleStepSelected = useCallback(
     (stepId: string, stepLabel: string) => {
       if (broadcastWebAction) {
-        broadcastWebAction('step_selected', { stepId, stepLabel })
+        broadcastWebAction(WEB_ACTION_TYPES.STEP_SELECTED, { stepId, stepLabel })
       }
       setDrawerOpen(false)
     },
@@ -95,9 +96,9 @@ export default function BuilderPage() {
     setMessages((prev) => [...prev, msg])
   }, [voiceMessages, projectId])
 
-  // Fetch initial step completion state
+  // Fetch initial step completion state (non-voice calls use projectId-based endpoint)
   useEffect(() => {
-    if (!projectId) return
+    if (!projectId || isVoiceCall) return
 
     fetch(`/api/projects/${projectId}/completion`)
       .then((res) => res.json())
@@ -112,7 +113,7 @@ export default function BuilderPage() {
       .catch(() => {
         // Graceful degradation — voice AI will re-broadcast completions
       })
-  }, [projectId])
+  }, [projectId, isVoiceCall])
 
   useEffect(() => {
     if (!user || !projectId) return
@@ -139,30 +140,64 @@ export default function BuilderPage() {
     }
   }, [isVoiceCall, projectId, previewUrl])
 
-  // Polling fallback for voice calls — if the Supabase Realtime broadcast
-  // is missed (race condition on first connect), poll for preview changes.
-  // Checks every 3 seconds by fetching the preview and comparing content
-  // length. Stops when the call ends.
+  // State reconciliation — periodically fetch ground truth from the database
+  // to catch missed Realtime broadcasts, handle page reloads, and detect
+  // project switches. Replaces the old 3-second preview polling.
   useEffect(() => {
-    if (!isVoiceCall || !callActive || !projectId) return
+    if (!isVoiceCall || !callActive || !callSid) return
 
-    let lastLength = 0
-    const interval = setInterval(async () => {
+    async function reconcile() {
       try {
-        const res = await fetch(`/api/builder/preview/${projectId}?poll=1`)
-        const html = await res.text()
-        // Refresh if content length changed and it's not the placeholder
-        if (html.length !== lastLength && !html.includes('No preview available')) {
-          lastLength = html.length
-          setPreviewUrl(`/api/builder/preview/${projectId}?t=${Date.now()}`)
+        const res = await fetch(`/api/voice/state/${callSid}`)
+        if (!res.ok) return
+        const state = await res.json()
+
+        // Additive merge — never remove steps the client already has
+        // (avoids flicker if DB write is slightly delayed)
+        setCompletedSteps((prev) => {
+          const merged = new Set(prev)
+          let changed = false
+          for (const step of state.completedSteps) {
+            if (!merged.has(step)) {
+              merged.add(step)
+              changed = true
+            }
+          }
+          // If build_site is newly detected, refresh the preview
+          if (!prev.has('build_site') && state.completedSteps.includes('build_site')) {
+            refreshPreview()
+          }
+          return changed ? merged : prev
+        })
+
+        // Reconcile project if switched mid-call
+        if (state.projectId && state.projectId !== projectId) {
+          router.replace(`/build/${state.projectId}?session=${callSid}`)
         }
       } catch {
-        // Ignore fetch errors during polling
+        // Silent fail — next interval or broadcast will catch up
       }
-    }, 3000)
+    }
 
-    return () => clearInterval(interval)
-  }, [isVoiceCall, callActive, projectId])
+    // Reconcile immediately on mount (handles page reload recovery)
+    reconcile()
+
+    // Reconcile every 10 seconds (handles missed broadcasts)
+    const interval = setInterval(reconcile, 10_000)
+
+    // Reconcile when tab becomes visible (handles tab switching back)
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        reconcile()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [isVoiceCall, callActive, callSid, projectId, router, refreshPreview])
 
 
   const handleSend = useCallback(
@@ -234,7 +269,7 @@ export default function BuilderPage() {
 
         // Notify voice AI about web page actions during active voice calls
         if (isVoiceCall && callActive && broadcastWebAction) {
-          broadcastWebAction('text_message_sent', {
+          broadcastWebAction(WEB_ACTION_TYPES.TEXT_MESSAGE_SENT, {
             message,
             ...(imageUrls.length > 0 ? { imageUrls } : {}),
           })
