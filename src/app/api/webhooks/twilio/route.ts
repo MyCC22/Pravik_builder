@@ -22,7 +22,11 @@ export async function POST(req: NextRequest) {
     const isValid = await verifyWebhookSignature(publicUrl, params, signature)
 
     if (!isValid) {
-      console.warn('Invalid Twilio webhook signature', { publicUrl, signature: signature.substring(0, 10) })
+      console.warn('Rejecting invalid Twilio webhook signature', { publicUrl, signature: signature.substring(0, 10) })
+      return new NextResponse(
+        generateTwiML('Request could not be verified.'),
+        { status: 403, headers: { 'Content-Type': 'text/xml' } }
+      )
     }
 
     const callerPhone = params.From || ''
