@@ -45,12 +45,15 @@ async def handle(ctx: ToolContext, params):
         )
         try:
             edit_result = await call_api_with_retry(ctx, edit_instruction)
-            await broadcast_preview_update(
-                ctx.identity.call_sid,
-                action=edit_result.get("action", "edited"),
-                message=edit_result.get("message", ""),
-                project_id=ctx.state.project_id,
-            )
+            if edit_result.get("action") != "error":
+                await broadcast_preview_update(
+                    ctx.identity.call_sid,
+                    action=edit_result.get("action", "edited"),
+                    message=edit_result.get("message", ""),
+                    project_id=ctx.state.project_id,
+                )
+            else:
+                logger.warning(f"[{ctx.identity.call_sid}] Failed to add phone to website: {edit_result.get('message')}")
         except Exception as edit_err:
             logger.warning(f"[{ctx.identity.call_sid}] Failed to add phone to website: {edit_err}")
 

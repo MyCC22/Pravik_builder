@@ -3,15 +3,23 @@
 import logging
 from typing import Any
 
-import httpx
-
 from src.services.builder_api import call_builder_api, fetch_site_state
 from src.services.call_session import save_call_message, update_call_state
+from src.services.circuit_breaker import CircuitBreaker, CircuitOpenError
+from src.services.retry import retry_with_backoff
 from src.services.supabase_client import get_supabase_client
 from src.services.twilio_sms import send_sms
 from src.tools._base import ToolContext
 
 logger = logging.getLogger(__name__)
+
+# Shared circuit breaker for the Builder API — one instance across all tool handlers.
+# Opens after 3 consecutive failures, recovers after 30 seconds.
+builder_api_circuit = CircuitBreaker(
+    failure_threshold=3,
+    recovery_timeout=30.0,
+    name="builder_api",
+)
 
 
 async def send_sms_if_needed(ctx: ToolContext):
@@ -42,18 +50,40 @@ async def call_api_with_retry(
     message: str,
     image_urls: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Call builder API with one retry on timeout."""
+    """Call builder API through circuit breaker with exponential backoff.
+
+    Returns a dict with {action, message}. On failure, returns a structured
+    error dict with action="error" so tool handlers can give the AI useful
+    guidance rather than going silent.
+    """
     try:
-        return await call_builder_api(
-            ctx.identity.builder_api_url, message, ctx.state.project_id,
+        return await builder_api_circuit.call(
+            retry_with_backoff,
+            call_builder_api,
+            ctx.identity.builder_api_url,
+            message,
+            ctx.state.project_id,
             image_urls=image_urls,
+            max_retries=2,
+            base_delay=1.0,
         )
-    except httpx.TimeoutException:
-        logger.warning(f"[{ctx.identity.call_sid}] Builder API timeout, retrying...")
-        return await call_builder_api(
-            ctx.identity.builder_api_url, message, ctx.state.project_id,
-            image_urls=image_urls,
-        )
+    except CircuitOpenError:
+        logger.warning(f"[{ctx.identity.call_sid}] Builder API circuit open — fast-failing")
+        return {
+            "action": "error",
+            "message": (
+                "The website builder is temporarily unavailable. "
+                "Please wait a moment and try again."
+            ),
+            "retryable": True,
+        }
+    except Exception as e:
+        logger.error(f"[{ctx.identity.call_sid}] Builder API failed after retries: {e}")
+        return {
+            "action": "error",
+            "message": f"Failed to reach the builder service: {type(e).__name__}",
+            "retryable": False,
+        }
 
 
 async def inject_site_context(ctx: ToolContext):

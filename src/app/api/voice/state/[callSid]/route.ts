@@ -43,7 +43,7 @@ export async function GET(
     const [projectResult, blocksResult, toolsResult] = await Promise.all([
       supabase
         .from('projects')
-        .select('name, provisioned_phone, forwarding_phone')
+        .select('name, provisioned_phone, forwarding_phone, updated_at')
         .eq('id', session.project_id)
         .single(),
       supabase
@@ -70,6 +70,7 @@ export async function GET(
       projectName: project?.name ?? null,
       state: session.state,
       completedSteps,
+      lastEditTimestamp: project?.updated_at ? new Date(project.updated_at).getTime() : null,
       timestamp: Date.now(),
     })
   } catch (error) {

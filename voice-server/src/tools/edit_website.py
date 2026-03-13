@@ -47,6 +47,20 @@ async def handle(ctx: ToolContext, params):
         result = await call_api_with_retry(
             ctx, instruction, image_urls=image_urls if image_urls else None,
         )
+
+        if result.get("action") == "error":
+            suggestion = (
+                "Tell the user the system is busy and you'll try again shortly."
+                if result.get("retryable")
+                else "Apologize and suggest the user try again in a few minutes."
+            )
+            await params.result_callback({
+                "message": result["message"],
+                "status": "temporary_error" if result.get("retryable") else "permanent_error",
+                "suggestion": suggestion,
+            })
+            return
+
         action = result.get("action", "edited")
 
         if action == "clarify":

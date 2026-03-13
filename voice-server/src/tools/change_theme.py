@@ -14,6 +14,14 @@ async def handle(ctx: ToolContext, params):
     request = params.arguments.get("request", "")
     try:
         result = await call_api_with_retry(ctx, request)
+
+        if result.get("action") == "error":
+            await params.result_callback({
+                "message": result["message"],
+                "status": "temporary_error" if result.get("retryable") else "permanent_error",
+            })
+            return
+
         await broadcast_preview_update(
             ctx.identity.call_sid,
             action=result.get("action", "edited"),

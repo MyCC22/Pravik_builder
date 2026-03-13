@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { BuilderLayout } from '@/features/builder/builder-layout'
 import { PreviewPanel } from '@/features/builder/preview-panel'
@@ -140,6 +140,11 @@ export default function BuilderPage() {
     }
   }, [isVoiceCall, projectId, previewUrl])
 
+  // Track last known edit timestamp to detect edits via reconciliation.
+  // When the server's lastEditTimestamp is newer than what we've seen,
+  // it means an edit happened that we may have missed via Realtime.
+  const lastEditTimestampRef = useRef<number>(0)
+
   // State reconciliation — periodically fetch ground truth from the database
   // to catch missed Realtime broadcasts, handle page reloads, and detect
   // project switches. Replaces the old 3-second preview polling.
@@ -169,6 +174,16 @@ export default function BuilderPage() {
           }
           return changed ? merged : prev
         })
+
+        // Detect edits via lastEditTimestamp — refresh preview if project
+        // was updated since our last check (catches missed edit broadcasts)
+        if (state.lastEditTimestamp && state.lastEditTimestamp > lastEditTimestampRef.current) {
+          if (lastEditTimestampRef.current > 0) {
+            // Only refresh if we had a previous value (skip initial fetch)
+            refreshPreview()
+          }
+          lastEditTimestampRef.current = state.lastEditTimestamp
+        }
 
         // Reconcile project if switched mid-call
         if (state.projectId && state.projectId !== projectId) {

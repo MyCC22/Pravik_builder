@@ -28,6 +28,20 @@ async def handle(ctx: ToolContext, params):
             ctx, description, image_urls=image_urls if image_urls else None,
         )
 
+        if result.get("action") == "error":
+            await update_call_state(ctx.identity.call_sid, "follow_up")
+            suggestion = (
+                "Tell the user the system is busy and you'll try again shortly."
+                if result.get("retryable")
+                else "Apologize and suggest the user try again in a few minutes."
+            )
+            await params.result_callback({
+                "message": result["message"],
+                "status": "temporary_error" if result.get("retryable") else "permanent_error",
+                "suggestion": suggestion,
+            })
+            return
+
         await broadcast_preview_update(
             ctx.identity.call_sid,
             action=result.get("action", "generated"),

@@ -3,10 +3,14 @@ import { getSupabaseClient } from '@/services/supabase/client'
 import { renderTemplate } from '@/templates/render'
 import { renderFromBlocks } from '@/templates/render-blocks'
 
-/** Never cache preview responses — refreshes must always show the latest build. */
+/**
+ * Short CDN cache — previews are refreshed via Realtime broadcasts (primary)
+ * and state reconciliation (fallback), not polling. A 5s CDN cache with
+ * 10s stale-while-revalidate dramatically reduces origin load at scale.
+ */
 const PREVIEW_HEADERS = {
   'Content-Type': 'text/html',
-  'Cache-Control': 'no-store, no-cache, must-revalidate',
+  'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=10',
 }
 
 export async function GET(
