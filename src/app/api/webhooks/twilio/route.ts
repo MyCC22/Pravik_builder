@@ -110,7 +110,15 @@ export async function POST(req: NextRequest) {
       if (projectCount > 0) {
         // Returning user with existing sites — defer project creation
         latestProjectId = projectsWithContent[0].id
-        latestProjectName = projectsWithContent[0].name || 'your website'
+        const rawName = projectsWithContent[0].name || ''
+        // Filter auto-generated names so the AI says "your website" instead of "Voice Build 3/13/2026"
+        const lowerName = rawName.toLowerCase()
+        latestProjectName = (
+          lowerName.startsWith('voice build') ||
+          lowerName.startsWith('untitled') ||
+          lowerName.startsWith('new project') ||
+          !rawName
+        ) ? 'your website' : rawName
         // projectId stays empty — voice server will create/select later
       }
     }

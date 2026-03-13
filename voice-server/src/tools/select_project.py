@@ -22,22 +22,29 @@ async def handle(ctx: ToolContext, params):
         return
 
     try:
-        # Fetch the project name from DB so we can tell the AI the friendly name
+        # Fetch project name and site state in parallel for speed
         supabase = await get_supabase_client()
-        project_resp = await (
+        name_query = (
             supabase.table("projects")
             .select("name")
             .eq("id", project_id)
             .single()
             .execute()
         )
-        project_name = (project_resp.data or {}).get("name", "") if project_resp.data else ""
+        state_query = fetch_site_state(project_id)
+        project_resp, state = await asyncio.gather(name_query, state_query)
 
+        raw_name = (project_resp.data or {}).get("name", "") if project_resp.data else ""
+        # Filter auto-generated names so AI says "your website" instead of "Voice Build ..."
+        lower_name = raw_name.lower().strip()
+        project_name = (
+            raw_name if raw_name and not lower_name.startswith("voice build")
+            and not lower_name.startswith("untitled")
+            and not lower_name.startswith("new project")
+            else ""
+        )
         ctx.state.switch_project(project_id, project_name=project_name)
-        await update_call_session_project(ctx.identity.call_sid, project_id)
-        await broadcast_project_selected(ctx.identity.call_sid, project_id)
 
-        state = await fetch_site_state(project_id)
         blocks = state.get("blocks", [])
         tools_data = state.get("tools", [])
 
@@ -52,19 +59,32 @@ async def handle(ctx: ToolContext, params):
                 )
                 tool_summary = f' Booking form: title="{cfg.get("title", "")}", fields=[{fields}].'
 
-        name_label = f'"{project_name}"' if project_name else "their website"
+        name_label = f'"{project_name}"' if project_name else "your website"
         summary_msg = (
             f"Project {name_label} loaded successfully. Current sections: {block_list}.{tool_summary} "
             f"Refer to this project as {name_label} when talking to the user (NEVER say the project ID). "
             f"Tell the user their site is loaded and ask what they'd like to change or update."
         )
 
-        await save_call_message(
-            call_session_id=ctx.identity.session_id,
-            role="system",
-            content=f"Loaded project {name_label} with sections: {block_list}",
-        )
+        # Return result to AI immediately — don't block on side-effect DB writes
         await params.result_callback({"message": summary_msg})
+
+        # Fire-and-forget: session update, broadcast, site context, and message log
+        async def _background():
+            try:
+                await asyncio.gather(
+                    update_call_session_project(ctx.identity.call_sid, project_id),
+                    broadcast_project_selected(ctx.identity.call_sid, project_id),
+                    save_call_message(
+                        call_session_id=ctx.identity.session_id,
+                        role="system",
+                        content=f"Loaded project {name_label} with sections: {block_list}",
+                    ),
+                )
+            except Exception as bg_err:
+                logger.warning(f"[{ctx.identity.call_sid}] select_project background tasks: {bg_err}")
+
+        asyncio.create_task(_background())
         asyncio.create_task(inject_site_context(ctx))
     except Exception as err:
         logger.error(f"[{ctx.identity.call_sid}] select_project failed: {err}", exc_info=True)
@@ -91,7 +111,7 @@ TOOL = ToolDefinition(
         "required": ["project_id"],
     },
     handle=handle,
-    timeout=15,
+    timeout=25,
     prompt_instructions="",
     returning_user_only=True,
 )

@@ -101,31 +101,9 @@ async def handle(ctx: ToolContext, params):
             )
             return
 
-        await broadcast_preview_update(
-            ctx.identity.call_sid,
-            action=action,
-            message=result.get("message", ""),
-            project_id=ctx.state.project_id,
-        )
-        await save_call_message(
-            call_session_id=ctx.identity.session_id,
-            role="assistant",
-            content=result.get("message", ""),
-            intent="edit_website",
-        )
         ctx.turn.last_edit_summary = f"{instruction} -> {result.get('message', '')}"
 
-        if not had_booking_before:
-            try:
-                new_state = await fetch_site_state(ctx.state.project_id)
-                has_booking_now = any(
-                    t.get("tool_type") == "booking" for t in new_state.get("tools", [])
-                )
-                if has_booking_now:
-                    await broadcast_step_completed(ctx.identity.call_sid, "contact_form")
-            except Exception:
-                pass
-
+        # Return result to AI immediately — don't block on side-effect writes
         await params.result_callback(
             {
                 "message": (
@@ -134,6 +112,39 @@ async def handle(ctx: ToolContext, params):
                 )
             }
         )
+
+        # Fire-and-forget: broadcast, save, booking check, site context
+        async def _post_edit():
+            try:
+                await asyncio.gather(
+                    broadcast_preview_update(
+                        ctx.identity.call_sid,
+                        action=action,
+                        message=result.get("message", ""),
+                        project_id=ctx.state.project_id,
+                    ),
+                    save_call_message(
+                        call_session_id=ctx.identity.session_id,
+                        role="assistant",
+                        content=result.get("message", ""),
+                        intent="edit_website",
+                    ),
+                )
+            except Exception as bg_err:
+                logger.warning(f"[{ctx.identity.call_sid}] edit_website background: {bg_err}")
+
+            if not had_booking_before:
+                try:
+                    new_state = await fetch_site_state(ctx.state.project_id)
+                    has_booking_now = any(
+                        t.get("tool_type") == "booking" for t in new_state.get("tools", [])
+                    )
+                    if has_booking_now:
+                        await broadcast_step_completed(ctx.identity.call_sid, "contact_form")
+                except Exception:
+                    pass
+
+        asyncio.create_task(_post_edit())
         asyncio.create_task(inject_site_context(ctx))
     except Exception as err:
         logger.error(f"[{ctx.identity.call_sid}] Edit failed: {err}")

@@ -42,44 +42,57 @@ async def handle(ctx: ToolContext, params):
             })
             return
 
-        await broadcast_preview_update(
-            ctx.identity.call_sid,
-            action=result.get("action", "generated"),
-            message=result.get("message", ""),
-            project_id=ctx.state.project_id,
-        )
-        await save_call_message(
-            call_session_id=ctx.identity.session_id,
-            role="assistant",
-            content=result.get("message", ""),
-            intent="build_website",
-        )
-        await update_call_state(ctx.identity.call_sid, "follow_up")
+        # Send result to AI immediately — don't block on side-effect writes
         await params.result_callback({"message": result.get("message", "Website built!")})
 
-        asyncio.create_task(broadcast_step_completed(ctx.identity.call_sid, "build_site"))
-        asyncio.create_task(broadcast_open_action_menu(ctx.identity.call_sid))
+        # Fire-and-forget: broadcast, save, state update, auto-name — all in parallel
+        async def _post_build():
+            tasks = [
+                broadcast_preview_update(
+                    ctx.identity.call_sid,
+                    action=result.get("action", "generated"),
+                    message=result.get("message", ""),
+                    project_id=ctx.state.project_id,
+                ),
+                save_call_message(
+                    call_session_id=ctx.identity.session_id,
+                    role="assistant",
+                    content=result.get("message", ""),
+                    intent="build_website",
+                ),
+                update_call_state(ctx.identity.call_sid, "follow_up"),
+                broadcast_step_completed(ctx.identity.call_sid, "build_site"),
+                broadcast_open_action_menu(ctx.identity.call_sid),
+            ]
 
-        if description:
-            async def _auto_name():
-                try:
-                    name = _clean_project_name(description)
-                    if name:
-                        supabase = await get_supabase_client()
-                        await (
-                            supabase.table("projects")
-                            .update({"name": name})
-                            .eq("id", ctx.state.project_id)
-                            .execute()
-                        )
-                        # Update in-memory state so AI uses the friendly name
-                        ctx.state.switch_project(ctx.state.project_id, project_name=name)
-                        logger.info(f"[{ctx.identity.call_sid}] Auto-named project: {name}")
-                except Exception as e:
-                    logger.warning(f"[{ctx.identity.call_sid}] Failed to auto-name project: {e}")
+            # Auto-name the project from the user's description
+            if description:
+                async def _auto_name():
+                    try:
+                        name = _clean_project_name(description)
+                        pid = ctx.state.project_id
+                        if name and pid:
+                            supabase = await get_supabase_client()
+                            await (
+                                supabase.table("projects")
+                                .update({"name": name})
+                                .eq("id", pid)
+                                .execute()
+                            )
+                            ctx.state.switch_project(pid, project_name=name)
+                            logger.info(f"[{ctx.identity.call_sid}] Auto-named project '{pid}' -> '{name}'")
+                        else:
+                            logger.warning(f"[{ctx.identity.call_sid}] Auto-name skipped: name={name!r}, pid={pid!r}")
+                    except Exception as e:
+                        logger.warning(f"[{ctx.identity.call_sid}] Failed to auto-name: {e}", exc_info=True)
+                tasks.append(_auto_name())
 
-            asyncio.create_task(_auto_name())
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for i, r in enumerate(results):
+                if isinstance(r, Exception):
+                    logger.warning(f"[{ctx.identity.call_sid}] _post_build task {i} failed: {r}")
 
+        asyncio.create_task(_post_build())
         asyncio.create_task(inject_site_context(ctx))
     except Exception as err:
         logger.error(f"[{ctx.identity.call_sid}] Build failed: {err}")

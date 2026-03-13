@@ -19,7 +19,18 @@ async def handle(ctx: ToolContext, params):
 
         lines = []
         for i, p in enumerate(projects, 1):
-            name = p.get("name", "Untitled")
+            raw_name = p.get("name", "")
+            lower_name = raw_name.lower().strip()
+            # Replace auto-generated names with a generic label
+            if (
+                not raw_name
+                or lower_name.startswith("voice build")
+                or lower_name.startswith("untitled")
+                or lower_name.startswith("new project")
+            ):
+                name = f"Website {i}"
+            else:
+                name = raw_name
             pid = p["id"]
             lines.append(f"{i}. {name} (ID: {pid})")
         project_list = "\n".join(lines)

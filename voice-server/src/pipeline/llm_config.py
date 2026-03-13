@@ -36,7 +36,7 @@ def create_llm(
                 audio=AudioConfiguration(
                     input=AudioInput(
                         transcription=InputAudioTranscription(model="whisper-1"),
-                        turn_detection=SemanticTurnDetection(type="semantic_vad", eagerness="low"),
+                        turn_detection=SemanticTurnDetection(type="semantic_vad", eagerness="medium"),
                         noise_reduction=InputAudioNoiseReduction(type="near_field"),
                     ),
                     output=AudioOutput(

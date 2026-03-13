@@ -124,6 +124,25 @@ Web page sync:
 # Internal: call flow selection
 # ---------------------------------------------------------------------------
 
+def _friendly_project_name(raw_name: str) -> str:
+    """Return a user-friendly project name, or 'your website' for auto-generated names.
+
+    Auto-generated names like 'Voice Build 3/13/2026' or 'Untitled Project' sound
+    robotic on a phone call — replace them with natural language.
+    """
+    if not raw_name:
+        return "your website"
+    lower = raw_name.strip().lower()
+    if (
+        lower.startswith("voice build")
+        or lower.startswith("untitled")
+        or lower.startswith("new project")
+        or lower.startswith("my project")
+    ):
+        return "your website"
+    return raw_name.strip()
+
+
 def _select_call_flow(
     is_new_user: bool,
     project_count: int,
@@ -131,7 +150,7 @@ def _select_call_flow(
     latest_project_id: str = "",
 ) -> str:
     """Return the appropriate call flow layer string with substitutions applied."""
-    fallback_name = latest_project_name or "your website"
+    fallback_name = _friendly_project_name(latest_project_name)
     if is_new_user or project_count == 0:
         return _CALL_FLOW_NEW_USER
     elif project_count == 1:
@@ -191,21 +210,22 @@ def build_initial_greeting(
     latest_project_id: str = "",
 ) -> str:
     """Build the initial LLM context message to trigger the appropriate greeting."""
+    friendly = _friendly_project_name(latest_project_name)
     if is_new_user or project_count == 0:
         return "Greet the caller as Timmy."
     elif project_count == 1:
         return (
-            f"The caller is a returning user. They have 1 existing website called "
-            f'"{latest_project_name}" (project_id: {latest_project_id}). '
+            f"The caller is a returning user. They have 1 existing website "
+            f'(project_id: {latest_project_id}). '
             f"Greet them warmly as Timmy, acknowledge "
-            f"you remember them, and ask if they want to continue with their site "
+            f"you remember them, and ask if they want to continue with {friendly} "
             f"or build something new. NEVER say the project ID to the user."
         )
     else:
         return (
             f"The caller is a returning user with {project_count} websites. "
-            f'Their most recent one is called "{latest_project_name}" (project_id: {latest_project_id}). '
+            f'The most recent one has project_id: {latest_project_id}. '
             f"Greet them warmly as Timmy, tell them how many sites they have, "
-            f"and ask if they want to continue with the latest one or work on "
+            f"and ask if they want to continue with {friendly} or work on "
             f"a different one. NEVER say the project ID to the user."
         )
