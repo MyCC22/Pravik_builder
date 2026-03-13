@@ -35,6 +35,18 @@ _AUTO_YES_PATTERNS = [
 # Valid step IDs for the action steps menu
 _VALID_STEP_IDS = {"build_site", "contact_form", "phone_number"}
 
+# Prefixes to strip when generating a clean project name from the build description
+_NAME_STRIP_PREFIXES = [
+    "a website for ", "build a website for ", "create a website for ",
+    "a landing page for ", "build a landing page for ", "create a landing page for ",
+    "a site for ", "build a site for ", "create a site for ",
+    "make a website for ", "make a site for ", "make a landing page for ",
+    "i want a website for ", "i need a website for ",
+    "build me a website for ", "make me a website for ",
+    "build me a ", "make me a ", "create a ", "build a ", "make a ",
+    "i want a ", "i need a ",
+]
+
 # OpenAI Realtime tool definitions
 TOOLS = [
     {
@@ -345,6 +357,46 @@ def create_tool_handlers(ctx: ToolContext) -> dict[str, Callable]:
         q_lower = question.lower()
         return any(p in q_lower for p in _AUTO_YES_PATTERNS)
 
+    def _clean_project_name(description: str) -> str:
+        """Convert a build description into a clean, short project name.
+
+        E.g. "A website for a summer camp with activities and pricing" →
+             "Summer Camp"
+        """
+        name = description.strip()
+
+        # Strip common request prefixes to get to the core subject
+        lower = name.lower()
+        for prefix in _NAME_STRIP_PREFIXES:
+            if lower.startswith(prefix):
+                name = name[len(prefix):]
+                lower = name.lower()
+                break
+
+        # Strip leading articles left over after prefix removal
+        for article in ["a ", "an ", "the "]:
+            if lower.startswith(article) and len(name) > len(article) + 3:
+                name = name[len(article):]
+                lower = name.lower()
+                break
+
+        # Trim trailing detail clauses ("with ...", "that has ...", etc.)
+        for delimiter in [" with ", " that ", " which ", " including ", " featuring ", " and also "]:
+            idx = lower.find(delimiter)
+            if idx > 5:  # keep at least a few words before trimming
+                name = name[:idx]
+                break
+
+        # Truncate at word boundary
+        if len(name) > 40:
+            name = name[:40].rsplit(" ", 1)[0]
+
+        # Title case for a clean display name
+        name = name.strip().title()
+
+        # Fallback if stripping removed everything
+        return name if name else description.strip()[:40].title()
+
     # ------------------------------------------------------------------
     # Tool handlers
     # ------------------------------------------------------------------
@@ -434,8 +486,7 @@ def create_tool_handlers(ctx: ToolContext) -> dict[str, Callable]:
             if description:
                 async def _auto_name():
                     try:
-                        # Use first ~50 chars of description as project name
-                        name = description.strip()[:50].strip()
+                        name = _clean_project_name(description)
                         if name:
                             supabase = await get_supabase_client()
                             await (
