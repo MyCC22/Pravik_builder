@@ -113,46 +113,58 @@ async def media_stream(websocket: WebSocket):
         logger.info(f"[{call_sid}] Call session created: {session_id}")
 
         # --- Subscribe to Realtime channel for page-open + web action events ---
-        # Both handlers need the llm ref which is created after pipeline creation,
-        # so we use a mutable container that the wrappers close over.
+        # Use an Event gate + queue to buffer events that arrive before the LLM
+        # is ready (between channel subscription and pipeline creation).
         _llm_ref = [None]  # set after create_pipeline
+        _llm_ready = asyncio.Event()
+        _pending_events: list[tuple[str, dict]] = []
+
+        async def _drain_pending_events():
+            """Replay any events that arrived before the LLM was ready."""
+            for action_type, payload in _pending_events:
+                try:
+                    await inject_web_context_into_llm(_llm_ref[0], action_type, payload)
+                except Exception as e:
+                    logger.warning(f"[{call_sid}] Failed to replay queued event {action_type}: {e}")
+            _pending_events.clear()
 
         def _on_page_opened():
-            # Only inject context on the FIRST page open — subsequent events
-            # are just page refreshes and should not trigger AI speech.
             if tool_ctx.state.page_opened:
                 logger.info(f"[{call_sid}] Page refresh detected — ignoring (already opened)")
                 return
             logger.info(f"[{call_sid}] Page opened by user (first time)")
             tool_ctx.state.mark_page_opened()
-            if _llm_ref[0]:
+            event_payload = {"message": "User opened the builder page on their phone."}
+            if _llm_ready.is_set():
                 asyncio.create_task(
-                    inject_web_context_into_llm(
-                        _llm_ref[0],
-                        "page_opened",
-                        {"message": "User opened the builder page on their phone."},
-                    )
+                    inject_web_context_into_llm(_llm_ref[0], "page_opened", event_payload)
                 )
+            else:
+                _pending_events.append(("page_opened", event_payload))
+                logger.info(f"[{call_sid}] Queued page_opened — LLM not ready yet")
 
         def _on_web_action_wrapper(payload):
-            if _llm_ref[0]:
-                action_type = payload.get("actionType", "unknown")
-                image_urls = payload.get("imageUrls", [])
+            action_type = payload.get("actionType", "unknown")
+            image_urls = payload.get("imageUrls", [])
 
-                if image_urls:
-                    tool_ctx.turn.pending_image_urls.extend(image_urls)
-                    logger.info(f"[{call_sid}] Stored {len(image_urls)} pending image URLs")
+            if image_urls:
+                tool_ctx.turn.pending_image_urls.extend(image_urls)
+                logger.info(f"[{call_sid}] Stored {len(image_urls)} pending image URLs")
 
-                # Handle project selection from dashboard
-                if action_type == "project_selected_from_web":
-                    selected_id = payload.get("projectId", "")
-                    if selected_id:
-                        tool_ctx.state.switch_project(selected_id)
-                        logger.info(f"[{call_sid}] Project selected from web: {selected_id}")
+            # Handle project selection from dashboard (state update doesn't need LLM)
+            if action_type == "project_selected_from_web":
+                selected_id = payload.get("projectId", "")
+                if selected_id:
+                    tool_ctx.state.switch_project(selected_id)
+                    logger.info(f"[{call_sid}] Project selected from web: {selected_id}")
 
+            if _llm_ready.is_set():
                 asyncio.create_task(
                     inject_web_context_into_llm(_llm_ref[0], action_type, payload)
                 )
+            else:
+                _pending_events.append((action_type, payload))
+                logger.info(f"[{call_sid}] Queued {action_type} — LLM not ready yet")
 
         await subscribe_to_call_channel(
             call_sid,
@@ -181,9 +193,13 @@ async def media_stream(websocket: WebSocket):
 
         task, runner, llm, recorder = create_pipeline(websocket, stream_sid, call_sid, tool_ctx)
 
-        # Activate page_opened + web_action handlers now that llm is ready
+        # Activate handlers now that LLM is ready, then replay queued events
         _llm_ref[0] = llm
         tool_ctx.llm_ref = llm
+        _llm_ready.set()
+        if _pending_events:
+            logger.info(f"[{call_sid}] Draining {len(_pending_events)} queued events")
+            await _drain_pending_events()
 
         await runner.run(task)
 
