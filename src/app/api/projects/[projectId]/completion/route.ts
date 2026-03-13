@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/services/supabase/client'
+import { getProjectCompletion } from '@/lib/services/completion'
 
 export async function GET(
   _req: NextRequest,
@@ -8,38 +9,19 @@ export async function GET(
   try {
     const { projectId } = await params
     const supabase = getSupabaseClient()
-
-    // Check if project has any blocks
-    const { count: blocksCount } = await supabase
-      .from('blocks')
-      .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId)
-
-    // Check if project has a booking tool
-    const { count: bookingCount } = await supabase
-      .from('tools')
-      .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId)
-      .eq('tool_type', 'booking')
-
-    // Check if project has a provisioned phone and forwarding number
-    const { data: project } = await supabase
-      .from('projects')
-      .select('provisioned_phone, forwarding_phone')
-      .eq('id', projectId)
-      .single()
+    const completion = await getProjectCompletion(supabase, projectId)
 
     return NextResponse.json({
-      hasBlocks: (blocksCount ?? 0) > 0,
-      hasBookingTool: (bookingCount ?? 0) > 0,
-      hasPhone: !!project?.provisioned_phone,
-      hasForwardingPhone: !!project?.forwarding_phone,
+      hasBlocks: completion.hasBlocks,
+      hasBookingTool: completion.hasBookingTool,
+      hasPhone: completion.hasPhone,
+      hasForwardingPhone: completion.hasForwardingPhone,
     })
   } catch (error) {
     console.error('Completion check error:', error)
     return NextResponse.json(
       { hasBlocks: false, hasBookingTool: false, hasPhone: false, hasForwardingPhone: false },
-      { status: 200 } // Graceful degradation — return empty state, not error
+      { status: 200 }
     )
   }
 }

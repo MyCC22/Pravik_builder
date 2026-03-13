@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/services/supabase/client'
+import { getProjectCompletion, completionToSteps } from '@/lib/services/completion'
 
 /**
  * State reconciliation endpoint.
@@ -39,38 +40,16 @@ export async function GET(
       })
     }
 
-    // 3. Query project details + completion state in parallel
-    const [projectResult, blocksResult, toolsResult] = await Promise.all([
-      supabase
-        .from('projects')
-        .select('name, provisioned_phone, forwarding_phone, updated_at')
-        .eq('id', session.project_id)
-        .single(),
-      supabase
-        .from('blocks')
-        .select('id', { count: 'exact', head: true })
-        .eq('project_id', session.project_id),
-      supabase
-        .from('tools')
-        .select('id', { count: 'exact', head: true })
-        .eq('project_id', session.project_id)
-        .eq('tool_type', 'booking'),
-    ])
-
-    const project = projectResult.data
-    const completedSteps: string[] = []
-
-    if ((blocksResult.count ?? 0) > 0) completedSteps.push('build_site')
-    if ((toolsResult.count ?? 0) > 0) completedSteps.push('contact_form')
-    if (project?.provisioned_phone) completedSteps.push('phone_number')
-    if (project?.forwarding_phone) completedSteps.push('call_forwarding')
+    // 3. Get completion state via shared service
+    const completion = await getProjectCompletion(supabase, session.project_id)
+    const completedSteps = completionToSteps(completion)
 
     return NextResponse.json({
       projectId: session.project_id,
-      projectName: project?.name ?? null,
+      projectName: completion.name,
       state: session.state,
       completedSteps,
-      lastEditTimestamp: project?.updated_at ? new Date(project.updated_at).getTime() : null,
+      lastEditTimestamp: completion.updatedAt ? new Date(completion.updatedAt).getTime() : null,
       timestamp: Date.now(),
     })
   } catch (error) {
