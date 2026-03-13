@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useSearchParams } from 'next/navigation'
+import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { BuilderLayout } from '@/features/builder/builder-layout'
 import { PreviewPanel } from '@/features/builder/preview-panel'
 import { ChatPanel } from '@/features/builder/chat-panel'
@@ -13,12 +13,15 @@ export default function BuilderPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const searchParams = useSearchParams()
   const callSid = searchParams.get('session')
+  const router = useRouter()
   const { user } = useSession()
   const [project, setProject] = useState<Project | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [action, setAction] = useState<string | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set())
 
   // Refresh preview by updating the URL with a cache-busting timestamp.
   // This forces a full re-fetch from the server — more reliable on mobile
@@ -29,10 +32,39 @@ export default function BuilderPage() {
     }
   }, [projectId])
 
+  // Handle mid-call project switching — voice AI selected a different project
+  const handleProjectSwitched = useCallback(
+    (newProjectId: string) => {
+      if (newProjectId !== projectId) {
+        router.push(`/build/${newProjectId}?session=${callSid}`)
+      }
+    },
+    [projectId, callSid, router]
+  )
+
   // Voice call session — subscribes to Supabase Realtime for live updates
   const { isVoiceCall, callActive, voiceMessages, broadcastWebAction } = useCallSession(
     callSid,
-    refreshPreview
+    {
+      onRefreshPreview: refreshPreview,
+      onProjectSwitched: handleProjectSwitched,
+      onActionMenuOpen: () => setDrawerOpen(true),
+      onActionMenuClose: () => setDrawerOpen(false),
+      onStepCompleted: (stepId: string) => {
+        setCompletedSteps((prev) => new Set(prev).add(stepId))
+      },
+    }
+  )
+
+  // Step selection handler — broadcasts to voice AI and closes drawer
+  const handleStepSelected = useCallback(
+    (stepId: string, stepLabel: string) => {
+      if (broadcastWebAction) {
+        broadcastWebAction('step_selected', { stepId, stepLabel })
+      }
+      setDrawerOpen(false)
+    },
+    [broadcastWebAction]
   )
 
   // Notify voice server that page has been opened
@@ -63,6 +95,24 @@ export default function BuilderPage() {
     setMessages((prev) => [...prev, msg])
   }, [voiceMessages, projectId])
 
+  // Fetch initial step completion state
+  useEffect(() => {
+    if (!projectId) return
+
+    fetch(`/api/projects/${projectId}/completion`)
+      .then((res) => res.json())
+      .then((data) => {
+        const completed = new Set<string>()
+        if (data.hasBlocks) completed.add('build_site')
+        if (data.hasBookingTool) completed.add('contact_form')
+        if (data.hasPhone) completed.add('phone_number')
+        setCompletedSteps(completed)
+      })
+      .catch(() => {
+        // Graceful degradation — voice AI will re-broadcast completions
+      })
+  }, [projectId])
+
   useEffect(() => {
     if (!user || !projectId) return
 
@@ -87,6 +137,31 @@ export default function BuilderPage() {
       setPreviewUrl(`/api/builder/preview/${projectId}`)
     }
   }, [isVoiceCall, projectId, previewUrl])
+
+  // Polling fallback for voice calls — if the Supabase Realtime broadcast
+  // is missed (race condition on first connect), poll for preview changes.
+  // Checks every 3 seconds by fetching the preview and comparing content
+  // length. Stops when the call ends.
+  useEffect(() => {
+    if (!isVoiceCall || !callActive || !projectId) return
+
+    let lastLength = 0
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/builder/preview/${projectId}?poll=1`)
+        const html = await res.text()
+        // Refresh if content length changed and it's not the placeholder
+        if (html.length !== lastLength && !html.includes('No preview available')) {
+          lastLength = html.length
+          setPreviewUrl(`/api/builder/preview/${projectId}?t=${Date.now()}`)
+        }
+      } catch {
+        // Ignore fetch errors during polling
+      }
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [isVoiceCall, callActive, projectId])
 
 
   const handleSend = useCallback(
@@ -201,6 +276,10 @@ export default function BuilderPage() {
       isVoiceCall={isVoiceCall}
       callActive={callActive}
       hasMessages={messages.length > 0}
+      drawerOpen={drawerOpen}
+      completedSteps={completedSteps}
+      onStepSelected={handleStepSelected}
+      onDrawerToggle={setDrawerOpen}
     />
   )
 }
