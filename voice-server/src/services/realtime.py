@@ -112,7 +112,7 @@ async def inject_web_context_into_llm(
     Uses conversation.item.create + response.create to make the AI
     immediately aware of and respond to web page events.
     """
-    from pipecat.services.openai_realtime_beta import events
+    import pipecat.services.openai.realtime.events as events
 
     # Build context message based on action type
     image_urls = payload.get("imageUrls", [])

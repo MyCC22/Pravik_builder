@@ -1,12 +1,13 @@
 """Call recording using Pipecat's AudioBufferProcessor.
 
 Records stereo audio (user=left channel, bot=right channel) and uploads
-the WAV file to Supabase Storage at call end. Old recordings are automatically
-deleted after the configured retention period.
+an MP3 file to Supabase Storage at call end. Uses ffmpeg for compression
+(~1MB per 5-minute call vs ~19MB for WAV).
 """
 
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
 import time
@@ -53,7 +54,7 @@ class CallRecorder:
         logger.info(f"[{self.call_sid}] Recording started")
 
     async def stop_and_upload(self) -> str | None:
-        """Stop recording, convert to WAV, upload to Supabase Storage.
+        """Stop recording, compress to MP3, upload to Supabase Storage.
 
         Returns the public URL of the recording, or None if no audio captured.
         """
@@ -67,41 +68,86 @@ class CallRecorder:
             logger.warning(f"[{self.call_sid}] No audio data captured")
             return None
 
-        # Convert raw PCM to WAV
-        wav_bytes = pcm_to_wav(
+        # Convert raw PCM to MP3 via ffmpeg (falls back to WAV if ffmpeg unavailable)
+        audio_bytes, content_type, ext = await pcm_to_mp3(
             self._audio_data,
             sample_rate=self.sample_rate,
             num_channels=self.num_channels,
         )
 
         # Upload to Supabase Storage
-        url = await self._upload(wav_bytes)
+        url = await self._upload(audio_bytes, content_type, ext)
         return url
 
-    async def _upload(self, wav_bytes: bytes) -> str | None:
-        """Upload WAV to Supabase Storage and return public URL."""
+    async def _upload(self, audio_bytes: bytes, content_type: str, ext: str) -> str | None:
+        """Upload audio file to Supabase Storage and return public URL."""
         bucket = config.supabase_storage_bucket
         timestamp = int(time.time())
-        path = f"{self.call_sid}/{timestamp}.wav"
+        path = f"{self.call_sid}/{timestamp}.{ext}"
 
         try:
             supabase = await get_supabase_client()
             await supabase.storage.from_(bucket).upload(
                 path=path,
-                file=wav_bytes,
+                file=audio_bytes,
                 file_options={
-                    "content-type": "audio/wav",
+                    "content-type": content_type,
                     "x-upsert": "false",
                 },
             )
 
             # Build public URL
             public_url = f"{config.supabase_url}/storage/v1/object/public/{bucket}/{path}"
-            logger.info(f"[{self.call_sid}] Recording uploaded: {public_url}")
+            logger.info(f"[{self.call_sid}] Recording uploaded ({ext}): {public_url}")
             return public_url
         except Exception as e:
             logger.error(f"[{self.call_sid}] Failed to upload recording: {e}", exc_info=True)
             return None
+
+
+async def pcm_to_mp3(
+    pcm_data: bytes,
+    sample_rate: int = 16000,
+    num_channels: int = 2,
+) -> tuple[bytes, str, str]:
+    """Convert raw PCM16 audio to MP3 using ffmpeg subprocess.
+
+    All arguments to create_subprocess_exec are static strings — no user
+    input is interpolated into the command, so there is no injection risk.
+
+    Returns (audio_bytes, content_type, file_extension).
+    Falls back to WAV if ffmpeg is not available.
+    """
+    try:
+        # All args are hardcoded constants except sample_rate/num_channels
+        # which are integers from __init__, not user input.
+        proc = await asyncio.create_subprocess_exec(
+            "ffmpeg",
+            "-f", "s16le",
+            "-ar", str(sample_rate),
+            "-ac", str(num_channels),
+            "-i", "pipe:0",
+            "-codec:a", "libmp3lame",
+            "-b:a", "64k",
+            "-f", "mp3",
+            "pipe:1",
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        mp3_data, stderr = await proc.communicate(input=pcm_data)
+
+        if proc.returncode != 0:
+            logger.warning(f"ffmpeg failed (rc={proc.returncode}): {stderr.decode()[:200]}")
+            return pcm_to_wav(pcm_data, sample_rate, num_channels), "audio/wav", "wav"
+
+        compression = len(pcm_data) / len(mp3_data) if mp3_data else 0
+        logger.info(f"MP3 encoded: {len(pcm_data)} -> {len(mp3_data)} bytes ({compression:.0f}x compression)")
+        return mp3_data, "audio/mpeg", "mp3"
+
+    except FileNotFoundError:
+        logger.warning("ffmpeg not found, falling back to WAV")
+        return pcm_to_wav(pcm_data, sample_rate, num_channels), "audio/wav", "wav"
 
 
 def pcm_to_wav(

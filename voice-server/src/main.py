@@ -8,7 +8,6 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from src.config import config
 from src.pipeline import create_pipeline
-from src.services.audio_recorder import cleanup_old_recordings
 from src.services.call_session import (
     create_call_session,
     end_call_session,
@@ -92,6 +91,7 @@ async def media_stream(websocket: WebSocket):
         project_id = params.get("projectId", "")
         is_new_user = params.get("isNewUser") == "true"
         phone_number = params.get("phoneNumber", "")
+        logger.info(f"[{call_sid}] Phone number from Twilio params: '{phone_number}'")
 
         # --- Create call session in DB ---
         session = await create_call_session(
@@ -111,6 +111,7 @@ async def media_stream(websocket: WebSocket):
 
         def _on_page_opened():
             logger.info(f"[{call_sid}] Page opened by user")
+            tool_ctx.page_opened = True
             if _llm_ref[0]:
                 asyncio.create_task(
                     inject_web_context_into_llm(
@@ -153,6 +154,7 @@ async def media_stream(websocket: WebSocket):
 
         # Activate page_opened + web_action handlers now that llm is ready
         _llm_ref[0] = llm
+        tool_ctx.llm_ref = llm
 
         await runner.run(task)
 
@@ -163,7 +165,7 @@ async def media_stream(websocket: WebSocket):
     finally:
         # --- Cleanup ---
         if call_sid:
-            # Stop recording and upload before ending the session
+            # Stop recording and upload
             if recorder:
                 try:
                     recording_url = await recorder.stop_and_upload()
@@ -183,19 +185,6 @@ async def media_stream(websocket: WebSocket):
                 pass
             await cleanup_channel(call_sid)
             logger.info(f"[{call_sid}] Call session ended and cleaned up")
-
-            # Fire-and-forget: cleanup old recordings (runs in background)
-            asyncio.create_task(_cleanup_old_recordings_safe())
-
-
-async def _cleanup_old_recordings_safe():
-    """Run recording cleanup, catching all errors."""
-    try:
-        deleted = await cleanup_old_recordings()
-        if deleted > 0:
-            logger.info(f"Background cleanup: deleted {deleted} old recording(s)")
-    except Exception as e:
-        logger.warning(f"Background recording cleanup failed: {e}")
 
 
 if __name__ == "__main__":

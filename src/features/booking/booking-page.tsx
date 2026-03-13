@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect } from 'react'
 import type { ToolConfig } from '@/services/agents/types'
 import type { ThemeClasses } from '@/templates/theme-classes'
 import { BookingForm } from './booking-form'
@@ -13,12 +12,6 @@ interface BookingPageProps {
 }
 
 export function BookingPage({ toolId, config, siteName, theme }: BookingPageProps) {
-  // Break out of iframe if embedded (e.g. from clicking "Book Now" in preview)
-  useEffect(() => {
-    if (window.self !== window.top) {
-      window.top?.location.replace(window.location.href)
-    }
-  }, [])
 
   return (
     <div className="min-h-screen bg-slate-50">

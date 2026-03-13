@@ -20,7 +20,9 @@ export default function BuilderPage() {
   const [loading, setLoading] = useState(false)
   const [action, setAction] = useState<string | null>(null)
 
-  // Refresh preview callback for voice call updates
+  // Refresh preview by updating the URL with a cache-busting timestamp.
+  // This forces a full re-fetch from the server — more reliable on mobile
+  // than iframe.contentWindow.location.reload() which can serve cached content.
   const refreshPreview = useCallback(() => {
     if (projectId) {
       setPreviewUrl(`/api/builder/preview/${projectId}?t=${Date.now()}`)
@@ -86,17 +88,6 @@ export default function BuilderPage() {
     }
   }, [isVoiceCall, projectId, previewUrl])
 
-  // Poll for preview updates during active voice calls
-  // Realtime broadcast can be unreliable — polling is the reliable fallback
-  useEffect(() => {
-    if (!isVoiceCall || !callActive || !projectId) return
-
-    const interval = setInterval(() => {
-      setPreviewUrl(`/api/builder/preview/${projectId}?t=${Date.now()}`)
-    }, 4000)
-
-    return () => clearInterval(interval)
-  }, [isVoiceCall, callActive, projectId])
 
   const handleSend = useCallback(
     async (message: string, images?: File[]) => {
