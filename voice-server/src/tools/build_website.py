@@ -72,6 +72,8 @@ async def handle(ctx: ToolContext, params):
                             .eq("id", ctx.state.project_id)
                             .execute()
                         )
+                        # Update in-memory state so AI uses the friendly name
+                        ctx.state.switch_project(ctx.state.project_id, project_name=name)
                         logger.info(f"[{ctx.identity.call_sid}] Auto-named project: {name}")
                 except Exception as e:
                     logger.warning(f"[{ctx.identity.call_sid}] Failed to auto-name project: {e}")

@@ -28,7 +28,8 @@ async def handle(ctx: ToolContext, params):
             {
                 "message": (
                     f"The user has {len(projects)} website(s):\n{project_list}\n\n"
-                    f"Read the list to the user naturally (just names, not IDs). "
+                    f"Read ONLY the friendly names to the user (e.g. 'You have Yoga Studio and Coffee Shop'). "
+                    f"NEVER say the project IDs out loud — those are internal. "
                     f"When they pick one, call select_project with that project's ID."
                 )
             }

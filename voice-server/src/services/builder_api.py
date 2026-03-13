@@ -1,5 +1,6 @@
 """HTTP client for calling the Builder API + Supabase queries."""
 
+import asyncio
 import logging
 from typing import Any
 
@@ -47,20 +48,19 @@ async def fetch_user_projects(user_id: str) -> list[dict[str, Any]]:
     )
     projects = projects_resp.data or []
 
-    # Filter to projects that have at least 1 block
-    projects_with_content = []
-    for proj in projects:
-        blocks_resp = await (
+    # Filter to projects that have at least 1 block — parallel queries
+    async def _has_blocks(proj):
+        resp = await (
             supabase.table("blocks")
             .select("id", count="exact")
             .eq("project_id", proj["id"])
             .limit(1)
             .execute()
         )
-        if blocks_resp.count and blocks_resp.count > 0:
-            projects_with_content.append(proj)
+        return (proj, resp.count and resp.count > 0)
 
-    return projects_with_content
+    results = await asyncio.gather(*[_has_blocks(p) for p in projects])
+    return [proj for proj, has in results if has]
 
 
 async def fetch_site_state(project_id: str) -> dict[str, Any]:
@@ -70,20 +70,20 @@ async def fetch_site_state(project_id: str) -> dict[str, Any]:
     """
     supabase = await get_supabase_client()
 
-    blocks_resp = await (
+    blocks_query = (
         supabase.table("blocks")
         .select("block_type, position")
         .eq("project_id", project_id)
         .order("position")
         .execute()
     )
-
-    tools_resp = await (
+    tools_query = (
         supabase.table("tools")
         .select("tool_type, config")
         .eq("project_id", project_id)
         .execute()
     )
+    blocks_resp, tools_resp = await asyncio.gather(blocks_query, tools_query)
 
     return {
         "blocks": blocks_resp.data or [],

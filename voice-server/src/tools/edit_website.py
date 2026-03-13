@@ -169,43 +169,10 @@ TOOL = ToolDefinition(
     handle=handle,
     timeout=120,
     prompt_instructions="""\
-Editing rules — CRITICAL:
-- You CAN change ANYTHING on the website. There is NO limitation. NEVER say you cannot make a change. NEVER refuse.
-- Pass the user's exact request as the instruction. Be specific: include exact text, field names, image descriptions.
-- After EVERY change, you'll receive a [SITE STATE] update telling you what sections and forms are on the site. Use this context for follow-up edits.
-
-TEXT CHANGES:
-- Headlines, titles, subtitles, descriptions, button labels, phone numbers, addresses, emails — everything.
-- "Change the headline to X" → edit_website(instruction="Change the hero headline to X")
-- "Update my phone number" → edit_website(instruction="Change the phone number to 555-1234")
-- "Make the button say Book Now" → edit_website(instruction="Change the CTA button text to Book Now")
-
-FORM / BOOKING CHANGES:
-- The website can have a booking form. You CAN add fields, remove fields, make fields required, change the form title, change button text, add dropdown options.
-- "Add a city field" → edit_website(instruction="Add a city text field to the booking form")
-- "Make email required" → edit_website(instruction="Make the email field required on the booking form")
-- "Add a dropdown for service type" → edit_website(instruction="Add a service type dropdown to the booking form with options: haircut, color, styling")
-- "Change the form button" → edit_website(instruction="Change the booking form submit button text to Book Now")
-
-IMAGE CHANGES:
-- You CAN change any image: hero background, gallery photos, section images.
-- "Change the hero image" → edit_website(instruction="Change the hero background image to something more professional")
-- "Add photos to the gallery" → edit_website(instruction="Add new photos to the gallery section")
-- "Make the image darker" → edit_website(instruction="Make the hero background image darker")
-- "Use a photo with mountains" → edit_website(instruction="Change the hero image to a photo of mountains")
-
-SECTION CHANGES:
-- Add, remove, or modify entire sections.
-- "Add testimonials" → edit_website(instruction="Add a testimonials section with 3 customer quotes")
-- "Remove the pricing section" → edit_website(instruction="Remove the pricing section")
-- "Add an FAQ" → edit_website(instruction="Add an FAQ section")
-
-STYLE / LAYOUT:
-- "Make the background darker" → edit_website(instruction="Make the hero background darker by increasing overlay opacity")
-- "Bigger text" → edit_website(instruction="Make the heading text larger in the hero section")
-
-FOLLOW-UP EDITS:
-- When the tool returns a question (e.g. "Which section?"), ask the user that question verbally. Once they answer, call edit_website AGAIN with their clarified answer combined with the original request. Do NOT just repeat the question — ALWAYS follow up with another edit_website call.
-- When the user says things like "make it bolder" or "change the text too" after a previous edit, call edit_website again — the system remembers what was just changed.""",
+Editing rules:
+- You CAN change ANYTHING: text, images, forms, sections, style. NEVER refuse a change.
+- Be specific in the instruction: include exact text, field names, image descriptions.
+- If the tool asks a clarifying question, ask the user, then call edit_website again with the clarified request.
+- For follow-up edits ("make it bolder"), just call edit_website again — the system tracks context.""",
     returning_user_only=False,
 )

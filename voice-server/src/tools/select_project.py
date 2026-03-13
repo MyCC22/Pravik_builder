@@ -8,6 +8,7 @@ from src.tools._helpers import inject_site_context
 from src.services.builder_api import fetch_site_state
 from src.services.call_session import save_call_message, update_call_session_project
 from src.services.realtime import broadcast_project_selected
+from src.services.supabase_client import get_supabase_client
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,18 @@ async def handle(ctx: ToolContext, params):
         return
 
     try:
-        ctx.state.switch_project(project_id)
+        # Fetch the project name from DB so we can tell the AI the friendly name
+        supabase = await get_supabase_client()
+        project_resp = await (
+            supabase.table("projects")
+            .select("name")
+            .eq("id", project_id)
+            .single()
+            .execute()
+        )
+        project_name = (project_resp.data or {}).get("name", "") if project_resp.data else ""
+
+        ctx.state.switch_project(project_id, project_name=project_name)
         await update_call_session_project(ctx.identity.call_sid, project_id)
         await broadcast_project_selected(ctx.identity.call_sid, project_id)
 
@@ -40,15 +52,17 @@ async def handle(ctx: ToolContext, params):
                 )
                 tool_summary = f' Booking form: title="{cfg.get("title", "")}", fields=[{fields}].'
 
+        name_label = f'"{project_name}"' if project_name else "their website"
         summary_msg = (
-            f"Project loaded successfully. Current sections: {block_list}.{tool_summary} "
+            f"Project {name_label} loaded successfully. Current sections: {block_list}.{tool_summary} "
+            f"Refer to this project as {name_label} when talking to the user (NEVER say the project ID). "
             f"Tell the user their site is loaded and ask what they'd like to change or update."
         )
 
         await save_call_message(
             call_session_id=ctx.identity.session_id,
             role="system",
-            content=f"Loaded project {project_id} with sections: {block_list}",
+            content=f"Loaded project {name_label} with sections: {block_list}",
         )
         await params.result_callback({"message": summary_msg})
         asyncio.create_task(inject_site_context(ctx))
