@@ -38,13 +38,16 @@ function makeRequest(params: Record<string, string> = {}) {
   }) as any
 }
 
-describe('Twilio webhook signature enforcement', () => {
+describe('Twilio webhook signature handling', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('rejects requests with invalid signature (403)', async () => {
+  it('allows requests with invalid signature (warn-only mode)', async () => {
+    // Signature verification is warn-only until URL parity with Twilio is confirmed.
+    // On Vercel, host/proto headers can differ from what Twilio signs against.
     mockVerify.mockResolvedValue(false)
     const res = await POST(makeRequest())
-    expect(res.status).toBe(403)
+    // Should NOT reject — warn-only mode lets requests through
+    expect(res.status).not.toBe(403)
   })
 
   it('processes valid requests normally', async () => {
