@@ -82,6 +82,48 @@ async def broadcast_voice_message(
     )
 
 
+async def broadcast_project_selected(call_sid: str, project_id: str) -> None:
+    """Broadcast project_selected event to the frontend (dashboard/build page)."""
+    channel = await _get_channel(call_sid)
+    await channel.send_broadcast(
+        "project_selected",
+        {
+            "projectId": project_id,
+            "timestamp": int(time.time() * 1000),
+        },
+    )
+
+
+async def broadcast_open_action_menu(call_sid: str) -> None:
+    """Broadcast open_action_menu event to show the action steps drawer."""
+    channel = await _get_channel(call_sid)
+    await channel.send_broadcast(
+        "open_action_menu",
+        {"timestamp": int(time.time() * 1000)},
+    )
+
+
+async def broadcast_close_action_menu(call_sid: str) -> None:
+    """Broadcast close_action_menu event to hide the action steps drawer."""
+    channel = await _get_channel(call_sid)
+    await channel.send_broadcast(
+        "close_action_menu",
+        {"timestamp": int(time.time() * 1000)},
+    )
+
+
+async def broadcast_step_completed(call_sid: str, step_id: str) -> None:
+    """Broadcast step_completed event to check off a step in the drawer."""
+    channel = await _get_channel(call_sid)
+    await channel.send_broadcast(
+        "step_completed",
+        {
+            "stepId": step_id,
+            "timestamp": int(time.time() * 1000),
+        },
+    )
+
+
 async def broadcast_call_ended(call_sid: str) -> None:
     """Broadcast call_ended event."""
     channel = await _get_channel(call_sid)
@@ -120,9 +162,9 @@ async def inject_web_context_into_llm(
 
     if action_type == "page_opened":
         context_text = (
-            "[WEB PAGE UPDATE: The user just opened the builder page on their phone! "
-            "Acknowledge this enthusiastically — say something like 'I see you opened the page, perfect!' "
-            "Then ask them what kind of website they'd like to build. Get excited and prompt them to describe their vision.]"
+            "[WEB PAGE UPDATE: The user just opened the builder page on their phone. "
+            "Briefly acknowledge it — something like 'Great, I see you have the page open!' "
+            "Then continue with the conversation naturally. Do NOT repeat the greeting or re-introduce yourself.]"
         )
     elif action_type == "text_message_sent":
         if image_urls:
@@ -142,6 +184,25 @@ async def inject_web_context_into_llm(
                 f"Briefly acknowledge it — say something like 'I see you made a change on the page' — "
                 f"and ask if there's anything else they'd like to adjust.]"
             )
+    elif action_type == "project_selected_from_web":
+        project_id = payload.get("projectId", "")
+        context_text = (
+            f"[WEB PAGE UPDATE: The user just selected a project from the dashboard on their phone. "
+            f"Project ID: {project_id}. "
+            f"Acknowledge this naturally — say something like 'Great choice, let me pull that up!' "
+            f"Then call select_project with project_id=\"{project_id}\" to load the context.]"
+        )
+    elif action_type == "new_project_requested":
+        context_text = (
+            "[WEB PAGE UPDATE: The user tapped 'Build New Website' on the dashboard. "
+            "Acknowledge this — 'Awesome, let's start fresh!' Then call create_new_project.]"
+        )
+    elif action_type == "step_selected":
+        step_label = payload.get("stepLabel", "a step")
+        context_text = (
+            f"[WEB PAGE UPDATE: The user tapped '{step_label}' in the action steps menu. "
+            f"They want to work on this next. Acknowledge their choice and proceed to help them with it.]"
+        )
     elif action_type == "image_uploaded":
         urls_str = ", ".join(image_urls) if image_urls else "unknown"
         context_text = (
