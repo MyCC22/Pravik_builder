@@ -144,6 +144,7 @@ export default function BuilderPage() {
   // When the server's lastEditTimestamp is newer than what we've seen,
   // it means an edit happened that we may have missed via Realtime.
   const lastEditTimestampRef = useRef<number>(0)
+  const reconcileInFlightRef = useRef(false)
 
   // State reconciliation — periodically fetch ground truth from the database
   // to catch missed Realtime broadcasts, handle page reloads, and detect
@@ -152,6 +153,8 @@ export default function BuilderPage() {
     if (!isVoiceCall || !callActive || !callSid) return
 
     async function reconcile() {
+      if (reconcileInFlightRef.current) return
+      reconcileInFlightRef.current = true
       try {
         const res = await fetch(`/api/voice/state/${callSid}`)
         if (!res.ok) return
@@ -191,6 +194,8 @@ export default function BuilderPage() {
         }
       } catch {
         // Silent fail — next interval or broadcast will catch up
+      } finally {
+        reconcileInFlightRef.current = false
       }
     }
 
