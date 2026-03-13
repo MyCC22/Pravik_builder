@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from src.services.supabase_client import get_supabase_client
+from src.services.supabase_retry import with_supabase_retry
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ async def create_call_session(
 ) -> dict[str, Any]:
     """Insert a new call session record. Returns the full row."""
     supabase = await get_supabase_client()
-    result = await (
+    result = await with_supabase_retry(
         supabase.table("call_sessions")
         .insert(
             {
@@ -30,7 +31,7 @@ async def create_call_session(
                 "state": "greeting",
             }
         )
-        .execute()
+        .execute
     )
     if not result.data:
         raise RuntimeError(f"Failed to create call session for {call_sid}")
@@ -54,12 +55,17 @@ async def mark_page_opened(call_sid: str) -> None:
 
 async def end_call_session(call_sid: str) -> None:
     supabase = await get_supabase_client()
-    await supabase.table("call_sessions").update(
-        {
-            "state": "ended",
-            "ended_at": datetime.now(timezone.utc).isoformat(),
-        }
-    ).eq("call_sid", call_sid).execute()
+    await with_supabase_retry(
+        supabase.table("call_sessions")
+        .update(
+            {
+                "state": "ended",
+                "ended_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+        .eq("call_sid", call_sid)
+        .execute
+    )
 
 
 async def save_call_message(
