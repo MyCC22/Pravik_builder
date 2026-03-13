@@ -47,6 +47,53 @@ _NAME_STRIP_PREFIXES = [
     "i want a ", "i need a ",
 ]
 
+def _is_auto_answerable(question: str, instruction: str) -> bool:
+    """Check if a clarify question can be auto-answered with 'yes'."""
+    q_lower = question.lower()
+    return any(p in q_lower for p in _AUTO_YES_PATTERNS)
+
+
+def _clean_project_name(description: str) -> str:
+    """Convert a build description into a clean, short project name.
+
+    E.g. "A website for a summer camp with activities and pricing" →
+         "Summer Camp"
+    """
+    name = description.strip()
+
+    # Strip common request prefixes to get to the core subject
+    lower = name.lower()
+    for prefix in _NAME_STRIP_PREFIXES:
+        if lower.startswith(prefix):
+            name = name[len(prefix):]
+            lower = name.lower()
+            break
+
+    # Strip leading articles left over after prefix removal
+    for article in ["a ", "an ", "the "]:
+        if lower.startswith(article) and len(name) > len(article) + 3:
+            name = name[len(article):]
+            lower = name.lower()
+            break
+
+    # Trim trailing detail clauses ("with ...", "that has ...", etc.)
+    for delimiter in [" with ", " that ", " which ", " including ", " featuring ", " and also "]:
+        idx = lower.find(delimiter)
+        if idx > 5:  # keep at least a few words before trimming
+            name = name[:idx]
+            break
+
+    # Truncate at word boundary
+    if len(name) > 40:
+        name = name[:40].rsplit(" ", 1)[0]
+
+    # Title case for a clean display name
+    name = name.strip().title()
+
+    # Fallback if stripping removed everything
+    return name if name else description.strip()[:40].title()
+
+
 # OpenAI Realtime tool definitions
 TOOLS = [
     {
@@ -374,51 +421,6 @@ def create_tool_handlers(ctx: ToolContext) -> dict[str, Callable]:
             logger.info(f"[{ctx.call_sid}] Site context injected: {len(blocks)} blocks{', has form' if tool_summary else ''}")
         except Exception as e:
             logger.warning(f"[{ctx.call_sid}] Failed to inject site context: {e}")
-
-    def _is_auto_answerable(question: str, instruction: str) -> bool:
-        """Check if a clarify question can be auto-answered with 'yes'."""
-        q_lower = question.lower()
-        return any(p in q_lower for p in _AUTO_YES_PATTERNS)
-
-    def _clean_project_name(description: str) -> str:
-        """Convert a build description into a clean, short project name.
-
-        E.g. "A website for a summer camp with activities and pricing" →
-             "Summer Camp"
-        """
-        name = description.strip()
-
-        # Strip common request prefixes to get to the core subject
-        lower = name.lower()
-        for prefix in _NAME_STRIP_PREFIXES:
-            if lower.startswith(prefix):
-                name = name[len(prefix):]
-                lower = name.lower()
-                break
-
-        # Strip leading articles left over after prefix removal
-        for article in ["a ", "an ", "the "]:
-            if lower.startswith(article) and len(name) > len(article) + 3:
-                name = name[len(article):]
-                lower = name.lower()
-                break
-
-        # Trim trailing detail clauses ("with ...", "that has ...", etc.)
-        for delimiter in [" with ", " that ", " which ", " including ", " featuring ", " and also "]:
-            idx = lower.find(delimiter)
-            if idx > 5:  # keep at least a few words before trimming
-                name = name[:idx]
-                break
-
-        # Truncate at word boundary
-        if len(name) > 40:
-            name = name[:40].rsplit(" ", 1)[0]
-
-        # Title case for a clean display name
-        name = name.strip().title()
-
-        # Fallback if stripping removed everything
-        return name if name else description.strip()[:40].title()
 
     # ------------------------------------------------------------------
     # Tool handlers

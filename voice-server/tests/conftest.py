@@ -26,6 +26,8 @@ def _install_mock_modules():
     pipecat_modules = [
         "pipecat",
         "pipecat.audio",
+        "pipecat.audio.filters",
+        "pipecat.audio.filters.rnnoise_filter",
         "pipecat.audio.vad",
         "pipecat.audio.vad.silero",
         "pipecat.frames",
