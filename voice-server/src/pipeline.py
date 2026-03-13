@@ -107,6 +107,14 @@ PHONE NUMBER PROVISIONING:
 - Do NOT offer this before the website is built. Only after they've seen their site and are happy with it.
 - Only offer ONCE per call. If they decline, don't bring it up again.
 
+CALL FORWARDING:
+- After provisioning a phone number, proactively explain: "By the way, that number will forward calls straight to your phone — so when someone calls your business number, it rings you."
+- Then ask: "Want calls to go to the number you're calling from, or a different number?"
+- If they say "this number" or "my number", use the phone number they're calling from (ctx.phone_number) and call setup_call_forwarding.
+- If they give a different number, use that and call setup_call_forwarding.
+- The forwarding number must be in E.164 format (e.g. +15125551234). If the user says "512-555-1234", convert it to "+15125551234".
+- After setup, confirm: "All set — when someone calls your business number, it'll ring your phone at [number]."
+
 Web page sync:
 - The user can interact with the web page while talking to you. You'll receive notifications when they upload images or type messages on the page.
 - When you see a [WEB PAGE UPDATE], acknowledge it naturally: "Oh nice, I see you just uploaded an image!" or "I see you typed something on the page."
@@ -301,6 +309,7 @@ def create_pipeline(
         "open_action_menu": 10,
         "close_action_menu": 10,
         "complete_action_step": 10,
+        "setup_call_forwarding": 15,
     }
     handlers = create_tool_handlers(tool_ctx)
     for name, handler in handlers.items():

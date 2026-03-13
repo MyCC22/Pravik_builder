@@ -9,6 +9,7 @@ export const ACTION_STEPS: ActionStep[] = [
   { id: 'build_site', label: 'Build website', subtitle: 'Create your site', comingSoon: false },
   { id: 'contact_form', label: 'Add contact form', subtitle: 'Collect leads from visitors', comingSoon: false },
   { id: 'phone_number', label: 'Get phone number', subtitle: 'Local number for your business', comingSoon: false },
+  { id: 'call_forwarding', label: 'Forward calls', subtitle: 'Ring your personal phone', comingSoon: false },
   { id: 'ai_phone', label: 'AI phone agent', subtitle: 'Answer calls automatically', comingSoon: true },
 ]
 

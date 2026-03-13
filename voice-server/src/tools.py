@@ -33,7 +33,7 @@ _AUTO_YES_PATTERNS = [
 ]
 
 # Valid step IDs for the action steps menu
-_VALID_STEP_IDS = {"build_site", "contact_form", "phone_number"}
+_VALID_STEP_IDS = {"build_site", "contact_form", "phone_number", "call_forwarding"}
 
 # Prefixes to strip when generating a clean project name from the build description
 _NAME_STRIP_PREFIXES = [
@@ -131,6 +131,29 @@ TOOLS = [
                 },
             },
             "required": ["area_code"],
+        },
+    },
+    {
+        "type": "function",
+        "name": "setup_call_forwarding",
+        "description": (
+            "Set which phone number the business number should forward calls to. "
+            "Call this after provisioning a phone number. Ask the user for the "
+            "phone number they want calls forwarded to — it might be the number "
+            "they're calling from, or a different one."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "forwarding_number": {
+                    "type": "string",
+                    "description": (
+                        "The phone number to forward calls to, in E.164 format "
+                        "(e.g. '+15125551234'). This is the user's personal or business phone."
+                    ),
+                },
+            },
+            "required": ["forwarding_number"],
         },
     },
     {
@@ -701,9 +724,11 @@ def create_tool_handlers(ctx: ToolContext) -> dict[str, Callable]:
             await params.result_callback({
                 "message": (
                     f"Phone number provisioned successfully! The new business number is "
-                    f"{display_number}. It has been added to the website and will forward "
-                    f"calls to the user's phone at {ctx.phone_number}. "
-                    f"Tell the user their new number and that it's already on their website."
+                    f"{display_number}. It has been added to the website. "
+                    f"Tell the user their new number and that it's on their website. "
+                    f"Then explain that the number can forward calls to their phone — "
+                    f"ask if they want calls forwarded to the number they're calling from, "
+                    f"or a different number. Then call setup_call_forwarding with their choice."
                 )
             })
 
@@ -724,6 +749,52 @@ def create_tool_handlers(ctx: ToolContext) -> dict[str, Callable]:
             logger.error(f"[{ctx.call_sid}] Phone provision failed: {err}", exc_info=True)
             await params.result_callback({
                 "message": "Sorry, there was an error setting up the phone number. Please try again."
+            })
+
+    async def handle_setup_call_forwarding(params: FunctionCallParams):
+        forwarding_number = params.arguments.get("forwarding_number", "").strip()
+        if not forwarding_number:
+            await params.result_callback({
+                "message": "I need the phone number to forward calls to. Ask the user for their number."
+            })
+            return
+
+        try:
+            supabase = await get_supabase_client()
+            await (
+                supabase.table("projects")
+                .update({"forwarding_phone": forwarding_number})
+                .eq("id", ctx.project_id)
+                .execute()
+            )
+
+            # Format for speech
+            display = forwarding_number
+            if len(forwarding_number) == 12 and forwarding_number.startswith("+1"):
+                digits = forwarding_number[2:]
+                display = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+
+            await save_call_message(
+                call_session_id=ctx.session_id,
+                role="assistant",
+                content=f"Set call forwarding to {display} for project {ctx.project_id}",
+                intent="setup_call_forwarding",
+            )
+
+            await params.result_callback({
+                "message": (
+                    f"Call forwarding is set up! Incoming calls to the business number "
+                    f"will now ring {display}. Tell the user their calls are all set — "
+                    f"anyone who calls the business number will reach them at {display}."
+                )
+            })
+
+            # Mark call_forwarding step as completed
+            asyncio.create_task(broadcast_step_completed(ctx.call_sid, "call_forwarding"))
+        except Exception as err:
+            logger.error(f"[{ctx.call_sid}] setup_call_forwarding failed: {err}", exc_info=True)
+            await params.result_callback({
+                "message": "Sorry, there was an error setting up call forwarding. Please try again."
             })
 
     async def handle_change_theme(params: FunctionCallParams):
@@ -921,6 +992,7 @@ def create_tool_handlers(ctx: ToolContext) -> dict[str, Callable]:
         "build_website": handle_build_website,
         "edit_website": handle_edit_website,
         "setup_phone_number": handle_setup_phone_number,
+        "setup_call_forwarding": handle_setup_call_forwarding,
         "change_theme": handle_change_theme,
         "open_action_menu": handle_open_action_menu,
         "close_action_menu": handle_close_action_menu,

@@ -106,6 +106,7 @@ export default function BuilderPage() {
         if (data.hasBlocks) completed.add('build_site')
         if (data.hasBookingTool) completed.add('contact_form')
         if (data.hasPhone) completed.add('phone_number')
+        if (data.hasForwardingPhone) completed.add('call_forwarding')
         setCompletedSteps(completed)
       })
       .catch(() => {

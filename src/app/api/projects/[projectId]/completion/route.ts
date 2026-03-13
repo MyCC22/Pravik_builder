@@ -22,10 +22,10 @@ export async function GET(
       .eq('project_id', projectId)
       .eq('tool_type', 'booking')
 
-    // Check if project has a provisioned phone
+    // Check if project has a provisioned phone and forwarding number
     const { data: project } = await supabase
       .from('projects')
-      .select('provisioned_phone')
+      .select('provisioned_phone, forwarding_phone')
       .eq('id', projectId)
       .single()
 
@@ -33,11 +33,12 @@ export async function GET(
       hasBlocks: (blocksCount ?? 0) > 0,
       hasBookingTool: (bookingCount ?? 0) > 0,
       hasPhone: !!project?.provisioned_phone,
+      hasForwardingPhone: !!project?.forwarding_phone,
     })
   } catch (error) {
     console.error('Completion check error:', error)
     return NextResponse.json(
-      { hasBlocks: false, hasBookingTool: false, hasPhone: false },
+      { hasBlocks: false, hasBookingTool: false, hasPhone: false, hasForwardingPhone: false },
       { status: 200 } // Graceful degradation — return empty state, not error
     )
   }
