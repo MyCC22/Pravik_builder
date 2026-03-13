@@ -51,71 +51,106 @@ async def broadcast_preview_update(
     action: str,
     message: str,
     project_id: str,
-) -> None:
-    """Broadcast preview_updated event to the browser."""
-    channel = await _get_channel(call_sid)
-    await channel.send_broadcast(
-        CallEvent.PREVIEW_UPDATED,
-        make_payload(action=action, message=message, projectId=project_id),
-    )
+) -> bool:
+    """Broadcast preview_updated event to the browser. Returns True on success."""
+    try:
+        channel = await _get_channel(call_sid)
+        await channel.send_broadcast(
+            CallEvent.PREVIEW_UPDATED,
+            make_payload(action=action, message=message, projectId=project_id),
+        )
+        return True
+    except Exception as e:
+        logger.warning(f"[{call_sid}] Failed to broadcast {CallEvent.PREVIEW_UPDATED}: {e}")
+        return False
 
 
 async def broadcast_voice_message(
     call_sid: str,
     role: str,
     content: str,
-) -> None:
-    """Broadcast voice_message event (user/assistant transcript)."""
-    channel = await _get_channel(call_sid)
-    await channel.send_broadcast(
-        CallEvent.VOICE_MESSAGE,
-        make_payload(role=role, content=content),
-    )
+) -> bool:
+    """Broadcast voice_message event (user/assistant transcript). Returns True on success."""
+    try:
+        channel = await _get_channel(call_sid)
+        await channel.send_broadcast(
+            CallEvent.VOICE_MESSAGE,
+            make_payload(role=role, content=content),
+        )
+        return True
+    except Exception as e:
+        logger.warning(f"[{call_sid}] Failed to broadcast {CallEvent.VOICE_MESSAGE}: {e}")
+        return False
 
 
-async def broadcast_project_selected(call_sid: str, project_id: str) -> None:
-    """Broadcast project_selected event to the frontend (dashboard/build page)."""
-    channel = await _get_channel(call_sid)
-    await channel.send_broadcast(
-        CallEvent.PROJECT_SELECTED,
-        make_payload(projectId=project_id),
-    )
+async def broadcast_project_selected(call_sid: str, project_id: str) -> bool:
+    """Broadcast project_selected event to the frontend (dashboard/build page). Returns True on success."""
+    try:
+        channel = await _get_channel(call_sid)
+        await channel.send_broadcast(
+            CallEvent.PROJECT_SELECTED,
+            make_payload(projectId=project_id),
+        )
+        return True
+    except Exception as e:
+        logger.warning(f"[{call_sid}] Failed to broadcast {CallEvent.PROJECT_SELECTED}: {e}")
+        return False
 
 
-async def broadcast_open_action_menu(call_sid: str) -> None:
-    """Broadcast open_action_menu event to show the action steps drawer."""
-    channel = await _get_channel(call_sid)
-    await channel.send_broadcast(
-        CallEvent.OPEN_ACTION_MENU,
-        make_payload(),
-    )
+async def broadcast_open_action_menu(call_sid: str) -> bool:
+    """Broadcast open_action_menu event to show the action steps drawer. Returns True on success."""
+    try:
+        channel = await _get_channel(call_sid)
+        await channel.send_broadcast(
+            CallEvent.OPEN_ACTION_MENU,
+            make_payload(),
+        )
+        return True
+    except Exception as e:
+        logger.warning(f"[{call_sid}] Failed to broadcast {CallEvent.OPEN_ACTION_MENU}: {e}")
+        return False
 
 
-async def broadcast_close_action_menu(call_sid: str) -> None:
-    """Broadcast close_action_menu event to hide the action steps drawer."""
-    channel = await _get_channel(call_sid)
-    await channel.send_broadcast(
-        CallEvent.CLOSE_ACTION_MENU,
-        make_payload(),
-    )
+async def broadcast_close_action_menu(call_sid: str) -> bool:
+    """Broadcast close_action_menu event to hide the action steps drawer. Returns True on success."""
+    try:
+        channel = await _get_channel(call_sid)
+        await channel.send_broadcast(
+            CallEvent.CLOSE_ACTION_MENU,
+            make_payload(),
+        )
+        return True
+    except Exception as e:
+        logger.warning(f"[{call_sid}] Failed to broadcast {CallEvent.CLOSE_ACTION_MENU}: {e}")
+        return False
 
 
-async def broadcast_step_completed(call_sid: str, step_id: str) -> None:
-    """Broadcast step_completed event to check off a step in the drawer."""
-    channel = await _get_channel(call_sid)
-    await channel.send_broadcast(
-        CallEvent.STEP_COMPLETED,
-        make_payload(stepId=step_id),
-    )
+async def broadcast_step_completed(call_sid: str, step_id: str) -> bool:
+    """Broadcast step_completed event to check off a step in the drawer. Returns True on success."""
+    try:
+        channel = await _get_channel(call_sid)
+        await channel.send_broadcast(
+            CallEvent.STEP_COMPLETED,
+            make_payload(stepId=step_id),
+        )
+        return True
+    except Exception as e:
+        logger.warning(f"[{call_sid}] Failed to broadcast {CallEvent.STEP_COMPLETED}: {e}")
+        return False
 
 
-async def broadcast_call_ended(call_sid: str) -> None:
-    """Broadcast call_ended event."""
-    channel = await _get_channel(call_sid)
-    await channel.send_broadcast(
-        CallEvent.CALL_ENDED,
-        make_payload(),
-    )
+async def broadcast_call_ended(call_sid: str) -> bool:
+    """Broadcast call_ended event. Returns True on success."""
+    try:
+        channel = await _get_channel(call_sid)
+        await channel.send_broadcast(
+            CallEvent.CALL_ENDED,
+            make_payload(),
+        )
+        return True
+    except Exception as e:
+        logger.warning(f"[{call_sid}] Failed to broadcast {CallEvent.CALL_ENDED}: {e}")
+        return False
 
 
 async def cleanup_channel(call_sid: str) -> None:
