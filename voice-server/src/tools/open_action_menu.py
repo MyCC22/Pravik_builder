@@ -3,6 +3,7 @@
 import logging
 
 from src.tools._base import ToolDefinition, ToolContext
+from src.tools._helpers import make_error_result
 from src.services.realtime import broadcast_open_action_menu
 
 logger = logging.getLogger(__name__)
@@ -16,7 +17,9 @@ async def handle(ctx: ToolContext, params):
         )
     except Exception as err:
         logger.error(f"[{ctx.identity.call_sid}] open_action_menu failed: {err}")
-        await params.result_callback({"message": "Menu opened."})
+        await params.result_callback(
+            make_error_result("Failed to open the action menu.", retryable=True)
+        )
 
 
 TOOL = ToolDefinition(

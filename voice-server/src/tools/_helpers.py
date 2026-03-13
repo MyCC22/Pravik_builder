@@ -13,6 +13,28 @@ from src.tools._base import ToolContext
 
 logger = logging.getLogger(__name__)
 
+
+def make_error_result(
+    message: str,
+    *,
+    retryable: bool = False,
+    suggestion: str = "",
+) -> dict[str, Any]:
+    """Build a consistent error result dict for tool handlers."""
+    if not suggestion:
+        suggestion = (
+            "Tell the user the system is temporarily busy and ask them to try again in a moment."
+            if retryable
+            else "Apologize to the user and suggest trying a different approach."
+        )
+    return {
+        "message": message,
+        "status": "temporary_error" if retryable else "permanent_error",
+        "retryable": retryable,
+        "suggestion": suggestion,
+    }
+
+
 # Shared circuit breaker for the Builder API — one instance across all tool handlers.
 # Opens after 3 consecutive failures, recovers after 30 seconds.
 builder_api_circuit = CircuitBreaker(

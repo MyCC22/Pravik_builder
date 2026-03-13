@@ -3,8 +3,8 @@
 import logging
 
 from src.tools._base import ToolDefinition, ToolContext
-from src.tools._helpers import call_api_with_retry
-from src.services.call_session import save_call_message
+from src.tools._helpers import call_api_with_retry, make_error_result
+from src.services.call_session import save_call_message, update_call_state
 from src.services.realtime import broadcast_preview_update
 
 logger = logging.getLogger(__name__)
@@ -16,10 +16,9 @@ async def handle(ctx: ToolContext, params):
         result = await call_api_with_retry(ctx, request)
 
         if result.get("action") == "error":
-            await params.result_callback({
-                "message": result["message"],
-                "status": "temporary_error" if result.get("retryable") else "permanent_error",
-            })
+            await update_call_state(ctx.identity.call_sid, "follow_up")
+            error = make_error_result(result["message"], retryable=result.get("retryable", False))
+            await params.result_callback(error)
             return
 
         await broadcast_preview_update(

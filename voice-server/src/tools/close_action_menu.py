@@ -3,6 +3,7 @@
 import logging
 
 from src.tools._base import ToolDefinition, ToolContext
+from src.tools._helpers import make_error_result
 from src.services.realtime import broadcast_close_action_menu
 
 logger = logging.getLogger(__name__)
@@ -14,7 +15,9 @@ async def handle(ctx: ToolContext, params):
         await params.result_callback({"message": "The action steps menu has been closed."})
     except Exception as err:
         logger.error(f"[{ctx.identity.call_sid}] close_action_menu failed: {err}")
-        await params.result_callback({"message": "Menu closed."})
+        await params.result_callback(
+            make_error_result("Failed to close the action menu.", retryable=True)
+        )
 
 
 TOOL = ToolDefinition(
