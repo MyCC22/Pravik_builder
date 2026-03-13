@@ -69,18 +69,58 @@ export async function POST(req: NextRequest) {
 
     if (sessionError) throw sessionError
 
-    // Create a new project for this voice call
-    const { data: project, error: projectError } = await supabase
-      .from('projects')
-      .insert({
-        user_id: user.id,
-        name: `Voice Build ${new Date().toLocaleDateString()}`,
-        source: 'voice',
-      })
-      .select()
-      .single()
+    // For returning users: check if they have existing projects with content
+    let projectId = ''
+    let projectCount = 0
+    let latestProjectId = ''
+    let latestProjectName = ''
 
-    if (projectError) throw projectError
+    if (!isNewUser) {
+      // Fetch projects that have at least one block (actual built sites)
+      const { data: existingProjects } = await supabase
+        .from('projects')
+        .select('id, name, updated_at')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+
+      // Check which projects have content (blocks)
+      const projectsWithContent = []
+      for (const proj of (existingProjects || []).slice(0, 10)) {
+        const { count } = await supabase
+          .from('blocks')
+          .select('*', { count: 'exact', head: true })
+          .eq('project_id', proj.id)
+
+        if (count && count > 0) {
+          projectsWithContent.push(proj)
+        }
+      }
+
+      projectCount = projectsWithContent.length
+
+      if (projectCount > 0) {
+        // Returning user with existing sites — defer project creation
+        latestProjectId = projectsWithContent[0].id
+        latestProjectName = projectsWithContent[0].name || 'your website'
+        // projectId stays empty — voice server will create/select later
+      }
+    }
+
+    // Only create a new project if user is new or has no existing content
+    if (isNewUser || projectCount === 0) {
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .insert({
+          user_id: user.id,
+          name: `Voice Build ${new Date().toLocaleDateString()}`,
+          source: 'voice',
+        })
+        .select()
+        .single()
+
+      if (projectError) throw projectError
+      projectId = project.id
+    }
 
     // Voice server WebSocket URL (Media Streams endpoint)
     const voiceServerUrl = (process.env.VOICE_SERVER_WS_URL || 'wss://pravik-voice-server.up.railway.app/media-stream').trim()
@@ -89,13 +129,16 @@ export async function POST(req: NextRequest) {
     const twiml = generateMediaStreamTwiML({
       websocketUrl: voiceServerUrl,
       callSid,
-      projectId: project.id,
+      projectId,
       userId: user.id,
       isNewUser,
       phoneNumber: callerPhone,
+      projectCount,
+      latestProjectId,
+      latestProjectName,
     })
 
-    console.log(`Voice call from ${callerPhone} (${isNewUser ? 'new' : 'returning'}) -> project ${project.id}`)
+    console.log(`Voice call from ${callerPhone} (${isNewUser ? 'new' : 'returning'}, ${projectCount} projects) -> ${projectId || 'deferred'}`)
 
     return new NextResponse(twiml, {
       headers: { 'Content-Type': 'text/xml' },

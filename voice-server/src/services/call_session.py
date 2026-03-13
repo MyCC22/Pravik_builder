@@ -87,6 +87,17 @@ async def update_recording_url(call_sid: str, url: str) -> None:
     ).eq("call_sid", call_sid).execute()
 
 
+async def update_call_session_project(call_sid: str, project_id: str) -> None:
+    """Update the project_id for an active call session (project switching)."""
+    supabase = await get_supabase_client()
+    await (
+        supabase.table("call_sessions")
+        .update({"project_id": project_id})
+        .eq("call_sid", call_sid)
+        .execute()
+    )
+
+
 async def get_call_session(call_sid: str) -> dict[str, Any] | None:
     supabase = await get_supabase_client()
     result = await (

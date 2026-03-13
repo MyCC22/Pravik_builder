@@ -54,6 +54,9 @@ export function generateMediaStreamTwiML(params: {
   userId: string
   isNewUser: boolean
   phoneNumber: string
+  projectCount: number
+  latestProjectId: string
+  latestProjectName: string
 }): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -64,6 +67,9 @@ export function generateMediaStreamTwiML(params: {
       <Parameter name="userId" value="${escapeXml(params.userId)}" />
       <Parameter name="isNewUser" value="${params.isNewUser ? 'true' : 'false'}" />
       <Parameter name="phoneNumber" value="${escapeXml(params.phoneNumber)}" />
+      <Parameter name="projectCount" value="${params.projectCount}" />
+      <Parameter name="latestProjectId" value="${escapeXml(params.latestProjectId)}" />
+      <Parameter name="latestProjectName" value="${escapeXml(params.latestProjectName)}" />
     </Stream>
   </Connect>
 </Response>`

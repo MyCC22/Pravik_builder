@@ -30,6 +30,39 @@ async def call_builder_api(
         return response.json()
 
 
+async def fetch_user_projects(user_id: str) -> list[dict[str, Any]]:
+    """Fetch all projects with content for a user, ordered by most recent.
+
+    Only returns projects that have at least one block (i.e. an actual built site).
+    """
+    supabase = await get_supabase_client()
+
+    # First get all projects for this user
+    projects_resp = await (
+        supabase.table("projects")
+        .select("id, name, source, created_at, updated_at")
+        .eq("user_id", user_id)
+        .order("updated_at", config={"ascending": False})
+        .execute()
+    )
+    projects = projects_resp.data or []
+
+    # Filter to projects that have at least 1 block
+    projects_with_content = []
+    for proj in projects:
+        blocks_resp = await (
+            supabase.table("blocks")
+            .select("id", count="exact")
+            .eq("project_id", proj["id"])
+            .limit(1)
+            .execute()
+        )
+        if blocks_resp.count and blocks_resp.count > 0:
+            projects_with_content.append(proj)
+
+    return projects_with_content
+
+
 async def fetch_site_state(project_id: str) -> dict[str, Any]:
     """Fetch current blocks and tools for a project.
 

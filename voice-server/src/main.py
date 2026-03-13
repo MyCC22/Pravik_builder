@@ -91,13 +91,21 @@ async def media_stream(websocket: WebSocket):
         project_id = params.get("projectId", "")
         is_new_user = params.get("isNewUser") == "true"
         phone_number = params.get("phoneNumber", "")
-        logger.info(f"[{call_sid}] Phone number from Twilio params: '{phone_number}'")
+        project_count = int(params.get("projectCount", "0"))
+        latest_project_id = params.get("latestProjectId", "")
+        latest_project_name = params.get("latestProjectName", "")
+        logger.info(
+            f"[{call_sid}] Phone: '{phone_number}', "
+            f"new: {is_new_user}, projects: {project_count}, "
+            f"latest: '{latest_project_name}' ({latest_project_id})"
+        )
 
         # --- Create call session in DB ---
+        # For returning users, project_id may be empty (deferred until they choose)
         session = await create_call_session(
             call_sid=call_sid,
             user_id=user_id,
-            project_id=project_id,
+            project_id=project_id if project_id else None,
             phone_number=phone_number,
             is_new_user=is_new_user,
         )
@@ -110,7 +118,12 @@ async def media_stream(websocket: WebSocket):
         _llm_ref = [None]  # set after create_pipeline
 
         def _on_page_opened():
-            logger.info(f"[{call_sid}] Page opened by user")
+            # Only inject context on the FIRST page open — subsequent events
+            # are just page refreshes and should not trigger AI speech.
+            if tool_ctx.page_opened:
+                logger.info(f"[{call_sid}] Page refresh detected — ignoring (already opened)")
+                return
+            logger.info(f"[{call_sid}] Page opened by user (first time)")
             tool_ctx.page_opened = True
             if _llm_ref[0]:
                 asyncio.create_task(
@@ -130,6 +143,13 @@ async def media_stream(websocket: WebSocket):
                     tool_ctx.pending_image_urls.extend(image_urls)
                     logger.info(f"[{call_sid}] Stored {len(image_urls)} pending image URLs")
 
+                # Handle project selection from dashboard
+                if action_type == "project_selected_from_web":
+                    selected_id = payload.get("projectId", "")
+                    if selected_id:
+                        tool_ctx.project_id = selected_id
+                        logger.info(f"[{call_sid}] Project selected from web: {selected_id}")
+
                 asyncio.create_task(
                     inject_web_context_into_llm(_llm_ref[0], action_type, payload)
                 )
@@ -148,6 +168,10 @@ async def media_stream(websocket: WebSocket):
             project_id=project_id,
             phone_number=phone_number,
             builder_api_url=config.builder_api_url,
+            is_new_user=is_new_user,
+            project_count=project_count,
+            latest_project_id=latest_project_id,
+            latest_project_name=latest_project_name,
         )
 
         task, runner, llm, recorder = create_pipeline(websocket, stream_sid, call_sid, tool_ctx)
