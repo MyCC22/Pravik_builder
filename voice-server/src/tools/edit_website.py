@@ -169,10 +169,26 @@ TOOL = ToolDefinition(
     handle=handle,
     timeout=120,
     prompt_instructions="""\
-Editing rules:
-- You CAN change ANYTHING: text, images, forms, sections, style. NEVER refuse a change.
-- Be specific in the instruction: include exact text, field names, image descriptions.
-- If the tool asks a clarifying question, ask the user, then call edit_website again with the clarified request.
-- For follow-up edits ("make it bolder"), just call edit_website again — the system tracks context.""",
+CAPABILITIES — you CAN change ANYTHING. NEVER say you cannot make a change. NEVER refuse:
+- TEXT: headlines, descriptions, buttons, phone numbers, emails, addresses — any text on the site
+- FORMS: add/remove fields, change labels, make fields required, add dropdowns with options
+- IMAGES: hero background, gallery, section images — change, swap, or add any image
+- SECTIONS: add/remove testimonials, FAQ, pricing, gallery, contact, or any section type
+- STYLE: colors, fonts, spacing, layout, backgrounds, overlays — any visual change
+
+INSTRUCTION QUALITY — be specific and faithful to what the user said:
+- Include the user's EXACT words for text changes (e.g. "Change headline to Grand Opening Sale")
+- For images, describe what they want (e.g. "Change hero image to a sunset over mountains")
+- NEVER invent content the user didn't mention. If they say "change the headline", ask WHAT to change it to
+- NEVER guess phone numbers, email addresses, prices, or business details — always ask the user
+
+CLARIFY vs ACT — know when to ask and when to do:
+- If the user gives a clear instruction ("make the text bigger"), just do it
+- If the user is vague ("change something"), ask what specifically they want changed
+- If the tool returns a question, ask the user verbally, then call edit_website AGAIN with their answer
+
+FOLLOW-UP EDITS:
+- "Make it bolder" or "change that too" → call edit_website again, the system tracks prior context
+- After EVERY edit, prompt the user to check their phone and give feedback""",
     returning_user_only=False,
 )
