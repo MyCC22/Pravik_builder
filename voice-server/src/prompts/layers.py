@@ -56,8 +56,9 @@ Call flow:
 
 _CALL_FLOW_RETURNING_ONE = """
 Call flow (returning user with 1 existing website):
+Their project is called "{project_name}" and its project_id is "{latest_project_id}".
 1. GREET with recognition: "Hey, welcome back! This is Timmy. I see you've been working on {project_name}. Want to pick up where we left off, or start something brand new?"
-2. If they say "continue" or "yes" or anything affirmative — call select_project with the project ID to load their existing site. Say something like "Awesome, let me pull that up for you!" Also call send_builder_link so they get the text link.
+2. If they say "continue" or "yes" or anything affirmative — call select_project with project_id="{latest_project_id}". Say something like "Awesome, let me pull that up for you!" Also call send_builder_link so they get the text link.
 3. If they say "new" or "something different" — call create_new_project. Say "Great, let's start fresh! What kind of website are we building?" Also call send_builder_link.
 4. Once a project is loaded, proceed with the normal editing/building flow described below.
 5. For changes, be proactive: "Want me to tweak anything? I can change the headline, update any text, add sections, swap images — whatever you need." Use edit_website or change_theme tools.
@@ -69,9 +70,10 @@ Call flow (returning user with 1 existing website):
 
 _CALL_FLOW_RETURNING_MULTI = """
 Call flow (returning user with {project_count} existing websites):
+Their most recent project is called "{project_name}" and its project_id is "{latest_project_id}".
 1. GREET with recognition: "Hey, welcome back! This is Timmy. You've got {project_count} websites with us. Want to continue with your latest one — {project_name} — or work on a different one?"
 2. Also call send_builder_link right away so they get the text link — it will open a dashboard showing all their sites.
-3. If they say "continue" or "the latest one" — call select_project with the latest project ID. Say "Let me pull that up for you!"
+3. If they say "continue" or "the latest one" — call select_project with project_id="{latest_project_id}". Say "Let me pull that up for you!"
 4. If they say "a different one" or name a specific site — call list_user_projects to get all their sites. Read them the list and let them pick. Then call select_project with their choice.
 5. If they say "build something new" — call create_new_project. Say "Let's start fresh!"
 6. The user can also pick a project from the dashboard on their phone. You'll get a notification when they do — acknowledge it naturally: "Oh nice, I see you picked that one! Let me load it up."
@@ -126,17 +128,22 @@ def _select_call_flow(
     is_new_user: bool,
     project_count: int,
     latest_project_name: str,
+    latest_project_id: str = "",
 ) -> str:
     """Return the appropriate call flow layer string with substitutions applied."""
     fallback_name = latest_project_name or "your website"
     if is_new_user or project_count == 0:
         return _CALL_FLOW_NEW_USER
     elif project_count == 1:
-        return _CALL_FLOW_RETURNING_ONE.format(project_name=fallback_name)
+        return _CALL_FLOW_RETURNING_ONE.format(
+            project_name=fallback_name,
+            latest_project_id=latest_project_id,
+        )
     else:
         return _CALL_FLOW_RETURNING_MULTI.format(
             project_count=project_count,
             project_name=fallback_name,
+            latest_project_id=latest_project_id,
         )
 
 
@@ -148,6 +155,7 @@ def build_system_instructions(
     is_new_user: bool,
     project_count: int,
     latest_project_name: str,
+    latest_project_id: str = "",
     tool_instructions: str = "",
     phase: str | None = None,
 ) -> str:
@@ -163,10 +171,11 @@ def build_system_instructions(
         is_new_user:         True if caller has no prior account.
         project_count:       Number of existing projects for this user.
         latest_project_name: Display name of the most recent project.
+        latest_project_id:   UUID of the most recent project.
         tool_instructions:   Aggregated per-tool prompt rules from the registry.
         phase:               Reserved. Currently ignored.
     """
-    call_flow = _select_call_flow(is_new_user, project_count, latest_project_name)
+    call_flow = _select_call_flow(is_new_user, project_count, latest_project_name, latest_project_id)
 
     layers = [LAYER_IDENTITY, call_flow, LAYER_GENERAL_RULES]
     if tool_instructions:
@@ -179,6 +188,7 @@ def build_initial_greeting(
     is_new_user: bool,
     project_count: int,
     latest_project_name: str,
+    latest_project_id: str = "",
 ) -> str:
     """Build the initial LLM context message to trigger the appropriate greeting."""
     if is_new_user or project_count == 0:
@@ -186,15 +196,16 @@ def build_initial_greeting(
     elif project_count == 1:
         return (
             f"The caller is a returning user. They have 1 existing website called "
-            f'"{latest_project_name}". Greet them warmly as Timmy, acknowledge '
+            f'"{latest_project_name}" (project_id: {latest_project_id}). '
+            f"Greet them warmly as Timmy, acknowledge "
             f"you remember them, and ask if they want to continue with their site "
-            f"or build something new."
+            f"or build something new. NEVER say the project ID to the user."
         )
     else:
         return (
             f"The caller is a returning user with {project_count} websites. "
-            f'Their most recent one is called "{latest_project_name}". '
+            f'Their most recent one is called "{latest_project_name}" (project_id: {latest_project_id}). '
             f"Greet them warmly as Timmy, tell them how many sites they have, "
             f"and ask if they want to continue with the latest one or work on "
-            f"a different one."
+            f"a different one. NEVER say the project ID to the user."
         )

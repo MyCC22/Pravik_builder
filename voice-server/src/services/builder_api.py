@@ -43,7 +43,7 @@ async def fetch_user_projects(user_id: str) -> list[dict[str, Any]]:
         supabase.table("projects")
         .select("id, name, source, created_at, updated_at")
         .eq("user_id", user_id)
-        .order("updated_at", config={"ascending": False})
+        .order("updated_at", desc=True)
         .execute()
     )
     projects = projects_resp.data or []

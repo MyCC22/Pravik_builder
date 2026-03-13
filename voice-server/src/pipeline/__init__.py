@@ -60,6 +60,7 @@ def create_pipeline(
         is_new_user=tool_ctx.identity.is_new_user,
         project_count=tool_ctx.state.project_count,
         latest_project_name=tool_ctx.state.latest_project_name,
+        latest_project_id=tool_ctx.state.latest_project_id,
         tool_instructions=tool_instructions,
     )
 
@@ -79,6 +80,7 @@ def create_pipeline(
         is_new_user=tool_ctx.identity.is_new_user,
         project_count=tool_ctx.state.project_count,
         latest_project_name=tool_ctx.state.latest_project_name,
+        latest_project_id=tool_ctx.state.latest_project_id,
     )
 
     # --- Assemble ---
