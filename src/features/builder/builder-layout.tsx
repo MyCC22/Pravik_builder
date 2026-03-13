@@ -2,6 +2,8 @@
 
 import { ReactNode, useState, useEffect } from 'react'
 import { VoiceCallBanner } from './voice-call-banner'
+import { ActionStepsTab } from '@/features/action-steps/action-steps-tab'
+import { ActionStepsDrawer } from '@/features/action-steps/action-steps-drawer'
 
 interface BuilderLayoutProps {
   preview: ReactNode
@@ -10,9 +12,25 @@ interface BuilderLayoutProps {
   isVoiceCall?: boolean
   callActive?: boolean
   hasMessages?: boolean
+  // Action steps menu
+  drawerOpen?: boolean
+  completedSteps?: Set<string>
+  onStepSelected?: (stepId: string, stepLabel: string) => void
+  onDrawerToggle?: (open: boolean) => void
 }
 
-export function BuilderLayout({ preview, chat, shareUrl, isVoiceCall, callActive, hasMessages }: BuilderLayoutProps) {
+export function BuilderLayout({
+  preview,
+  chat,
+  shareUrl,
+  isVoiceCall,
+  callActive,
+  hasMessages,
+  drawerOpen,
+  completedSteps,
+  onStepSelected,
+  onDrawerToggle,
+}: BuilderLayoutProps) {
   // Start collapsed — auto-expand when first message arrives
   const [chatExpanded, setChatExpanded] = useState(false)
   const [userCollapsed, setUserCollapsed] = useState(false)
@@ -55,6 +73,23 @@ export function BuilderLayout({ preview, chat, shareUrl, isVoiceCall, callActive
               Share link
             </a>
           </div>
+        )}
+        {/* Action steps menu — only during active voice calls */}
+        {isVoiceCall && callActive && completedSteps && onStepSelected && onDrawerToggle && (
+          <>
+            {!drawerOpen && (
+              <ActionStepsTab
+                completedSteps={completedSteps}
+                onClick={() => onDrawerToggle(true)}
+              />
+            )}
+            <ActionStepsDrawer
+              open={!!drawerOpen}
+              completedSteps={completedSteps}
+              onStepSelected={onStepSelected}
+              onClose={() => onDrawerToggle(false)}
+            />
+          </>
         )}
       </div>
 
