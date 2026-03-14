@@ -66,6 +66,12 @@ Rules:
 - "Add phone number" or "change text" on an existing section → edit_block
 - "Add a testimonials section" → add_block
 
+CRITICAL — correct block targeting:
+- For edit_block, you MUST pick the block that actually contains the content the user wants to change.
+- "Change teacher name" → look at the current blocks list. If there's a "team" or "speakers" block, target that. If NO block has teacher/instructor content, use "clarify" to ask which section.
+- "Change the headline" or "replace Headline" → if the user means the main hero text, target "hero". But "headline" can exist in any block — pick the most likely one.
+- When the user's request could apply to MULTIPLE blocks or NO block clearly matches, prefer "clarify" over guessing wrong. A wrong edit target can destroy a section.
+
 CRITICAL — edit_block vs change_image distinction:
 - change_image = the user wants a DIFFERENT image (swap, replace, new photo, upload a new one, find a new one)
 - edit_block = the user wants to MODIFY how an existing image LOOKS or modify the section's CSS/HTML (darker, lighter, opacity, brightness, blur, overlay, zoom in, crop, reduce/increase opacity, dim, darken the background, lighten, make it more/less transparent)

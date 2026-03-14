@@ -49,7 +49,20 @@ export async function editBlock(
 
   const text = response.content[0].type === 'text' ? response.content[0].text : ''
   // Strip markdown fences if present
-  return text.replace(/```html?\n?/g, '').replace(/```/g, '').trim()
+  const cleaned = text.replace(/```html?\n?/g, '').replace(/```/g, '').trim()
+
+  // Safety net: if the model returned conversational text instead of HTML,
+  // fall back to the original block HTML to prevent destroying the section.
+  // Valid HTML blocks always start with a tag like <section, <nav, <footer, <div, <header, etc.
+  if (cleaned && !cleaned.startsWith('<')) {
+    console.warn(
+      `[block-editor] Model returned non-HTML for ${block.block_type} block — returning original HTML. ` +
+      `Response started with: "${cleaned.substring(0, 80)}..."`
+    )
+    return block.html
+  }
+
+  return cleaned || block.html
 }
 
 export async function addBlock(
