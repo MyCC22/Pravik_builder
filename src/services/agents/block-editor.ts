@@ -53,16 +53,42 @@ export async function editBlock(
 
   // Safety net: if the model returned conversational text instead of HTML,
   // fall back to the original block HTML to prevent destroying the section.
-  // Valid HTML blocks always start with a tag like <section, <nav, <footer, <div, <header, etc.
-  if (cleaned && !cleaned.startsWith('<')) {
+  if (!cleaned) {
+    console.warn(`[block-editor] Empty response for ${block.block_type} block — returning original`)
+    return block.html
+  }
+
+  // Check 1: Must start with an HTML tag
+  if (!cleaned.startsWith('<')) {
     console.warn(
-      `[block-editor] Model returned non-HTML for ${block.block_type} block — returning original HTML. ` +
-      `Response started with: "${cleaned.substring(0, 80)}..."`
+      `[block-editor] Non-HTML response for ${block.block_type} block — returning original. ` +
+      `Started with: "${cleaned.substring(0, 80)}..."`
     )
     return block.html
   }
 
-  return cleaned || block.html
+  // Check 2: Must have structural HTML elements (not just a <p> explanation wrapped in tags).
+  // Real blocks contain class attributes, nested divs, sections, etc.
+  const hasStructure = /class="/.test(cleaned) || /<(?:section|nav|footer|header|div)\s/.test(cleaned)
+  if (!hasStructure) {
+    console.warn(
+      `[block-editor] Response lacks structural HTML for ${block.block_type} block — returning original. ` +
+      `Response (${cleaned.length} chars): "${cleaned.substring(0, 120)}..."`
+    )
+    return block.html
+  }
+
+  // Check 3: If response is dramatically smaller than original (< 25%), likely a destruction.
+  // Only apply when original is substantial (> 200 chars) to avoid false positives on tiny blocks.
+  if (block.html.length > 200 && cleaned.length < block.html.length * 0.25) {
+    console.warn(
+      `[block-editor] Response suspiciously small for ${block.block_type} block ` +
+      `(${cleaned.length} vs original ${block.html.length}) — returning original`
+    )
+    return block.html
+  }
+
+  return cleaned
 }
 
 export async function addBlock(
