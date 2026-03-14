@@ -25,7 +25,9 @@ def create_llm(
     Configure OpenAI Realtime speech-to-speech LLM.
 
     Uses gpt-realtime-1.5 with Whisper transcription, semantic VAD,
-    far-field noise reduction (for phone calls), and the "ash" voice.
+    near-field noise reduction, and the "ash" voice.
+
+    Audio pipeline: Twilio → RNNoise (local) → near_field (OpenAI) → Semantic VAD → LLM
     """
     return OpenAIRealtimeLLMService(
         api_key=config.openai_api_key,
@@ -36,8 +38,8 @@ def create_llm(
                 audio=AudioConfiguration(
                     input=AudioInput(
                         transcription=InputAudioTranscription(model="whisper-1"),
-                        turn_detection=SemanticTurnDetection(type="semantic_vad", eagerness="low"),
-                        noise_reduction=InputAudioNoiseReduction(type="far_field"),
+                        turn_detection=SemanticTurnDetection(type="semantic_vad", eagerness="medium"),
+                        noise_reduction=InputAudioNoiseReduction(type="near_field"),
                     ),
                     output=AudioOutput(
                         voice="ash",

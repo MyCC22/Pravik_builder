@@ -20,9 +20,9 @@ def create_transport(
 
     RNNoiseFilter runs local neural noise reduction on incoming audio before
     it reaches OpenAI. This provides defense-in-depth: local RNNoise filter
-    + OpenAI's server-side far_field noise reduction + semantic turn detection.
+    + OpenAI's server-side near_field noise reduction + semantic turn detection.
 
-    Audio pipeline: Twilio → RNNoise (local) → far_field (OpenAI) → Semantic VAD → LLM
+    Audio pipeline: Twilio → RNNoise (local) → near_field (OpenAI) → Semantic VAD → LLM
     """
     return FastAPIWebsocketTransport(
         websocket=websocket,
