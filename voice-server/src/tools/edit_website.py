@@ -180,25 +180,40 @@ TOOL = ToolDefinition(
     handle=handle,
     timeout=120,
     prompt_instructions="""\
-CAPABILITIES — you CAN change ANYTHING. NEVER say you cannot make a change. NEVER refuse:
-- TEXT: headlines, descriptions, buttons, phone numbers, emails, addresses — any text on the site
-- FORMS: add/remove fields, change labels, make fields required, add dropdowns with options
-- IMAGES: hero background, gallery, section images — change, swap, or add any image
-- SECTIONS: add/remove testimonials, FAQ, pricing, gallery, contact, or any section type
-- STYLE: colors, fonts, spacing, layout, backgrounds, overlays — any visual change
+CAPABILITIES — you CAN change ANYTHING on the website. There is NO limitation. NEVER say you cannot make a change. NEVER refuse.
+Pass the user's exact request as the instruction. Be specific: include exact text, field names, image descriptions.
+After EVERY change, you'll receive a [SITE STATE] update telling you what sections and forms are on the site. Use this context for follow-up edits.
 
-INSTRUCTION QUALITY — be specific and faithful to what the user said:
-- Include the user's EXACT words for text changes (e.g. "Change headline to Grand Opening Sale")
-- For images, describe what they want (e.g. "Change hero image to a sunset over mountains")
+TEXT CHANGES (headlines, titles, subtitles, descriptions, button labels, phone numbers, addresses, emails — everything):
+- "Change the headline to X" → edit_website(instruction="Change the hero headline to X")
+- "Update my phone number" → edit_website(instruction="Change the phone number to 555-1234")
+- "Make the button say Book Now" → edit_website(instruction="Change the CTA button text to Book Now")
+
+FORM / BOOKING CHANGES (add fields, remove fields, make required, change button text, add dropdown options):
+- "Add a city field" → edit_website(instruction="Add a city text field to the booking form")
+- "Make email required" → edit_website(instruction="Make the email field required on the booking form")
+- "Add a dropdown for service type" → edit_website(instruction="Add a service type dropdown to the booking form with options: haircut, color, styling")
+
+IMAGE CHANGES (hero background, gallery photos, section images):
+- "Change the hero image" → edit_website(instruction="Change the hero background image to something more professional")
+- "Use a photo with mountains" → edit_website(instruction="Change the hero image to a photo of mountains")
+- "Make the image darker" → edit_website(instruction="Make the hero background image darker")
+
+SECTION CHANGES (add, remove, or modify entire sections):
+- "Add testimonials" → edit_website(instruction="Add a testimonials section with 3 customer quotes")
+- "Remove the pricing section" → edit_website(instruction="Remove the pricing section")
+
+STYLE / LAYOUT:
+- "Make the background darker" → edit_website(instruction="Make the hero background darker by increasing overlay opacity")
+- "Bigger text" → edit_website(instruction="Make the heading text larger in the hero section")
+
+INSTRUCTION QUALITY:
+- Include the user's EXACT words for text changes
 - NEVER invent content the user didn't mention. If they say "change the headline", ask WHAT to change it to
 - NEVER guess phone numbers, email addresses, prices, or business details — always ask the user
 
-CLARIFY vs ACT — know when to ask and when to do:
-- If the user gives a clear instruction ("make the text bigger"), just do it
-- If the user is vague ("change something"), ask what specifically they want changed
-- If the tool returns a question, ask the user verbally, then call edit_website AGAIN with their answer
-
 FOLLOW-UP EDITS:
+- When the tool returns a question (e.g. "Which section?"), ask the user verbally, then call edit_website AGAIN with their clarified answer. Do NOT just repeat the question.
 - "Make it bolder" or "change that too" → call edit_website again, the system tracks prior context
 - After EVERY edit, prompt the user to check their phone and give feedback""",
     returning_user_only=False,

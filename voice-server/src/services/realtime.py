@@ -210,11 +210,15 @@ async def inject_web_context_into_llm(
         project_id = payload.get("projectId", "")
         context_text = (
             f"[WEB EVENT: project_selected — The user selected a project from the "
-            f"dashboard on their phone. project_id: \"{project_id}\"]"
+            f"dashboard on their phone. Call select_project with project_id: \"{project_id}\". "
+            f"Do NOT ask which project — they already chose.]"
         )
 
     elif action_type == WebActionType.NEW_PROJECT_REQUESTED:
-        context_text = "[WEB EVENT: new_project — The user tapped 'Build New Website' on the dashboard.]"
+        context_text = (
+            "[WEB EVENT: new_project — The user tapped 'Build New Website' on the dashboard. "
+            "Call create_new_project, then ask what kind of website they want to build.]"
+        )
 
     elif action_type == WebActionType.STEP_SELECTED:
         step_label = payload.get("stepLabel", "a step")
@@ -225,7 +229,10 @@ async def inject_web_context_into_llm(
         count = len(image_urls) if image_urls else 0
         context_text = (
             f"[WEB EVENT: image_uploaded — The user uploaded {count} image(s) "
-            f"on the web page. Image URLs: {urls_str}]"
+            f"on the web page. Image URLs: {urls_str}. "
+            f"Ask what they want to do with the image(s) — e.g. 'Want me to use that "
+            f"as the hero background, or somewhere else on the site?' While processing, "
+            f"keep talking: 'I'm swapping that in now, give me just a moment...']"
         )
 
     else:
