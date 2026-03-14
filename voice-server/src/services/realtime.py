@@ -169,16 +169,19 @@ async def inject_web_context_into_llm(
     action_type: str,
     payload: dict[str, Any],
 ) -> None:
-    """Inject a web page action as context into the OpenAI Realtime session.
+    """Inject a web page action as factual context into the OpenAI Realtime session.
 
-    Uses conversation.item.create to add context. For most actions, also sends
-    response.create to trigger an immediate AI response. For page_opened, only
-    injects the context silently — the AI will incorporate it when it next speaks,
-    avoiding overlapping audio responses during the greeting.
+    Uses conversation.item.create to add context. For actionable events, also
+    sends response.create to trigger an immediate AI response. For page_opened,
+    only injects the context silently — the AI will incorporate it when it next
+    speaks, avoiding overlapping audio during the greeting.
+
+    The context text is deliberately factual — it describes WHAT happened, not
+    HOW the AI should respond. Response behavior is governed by the general
+    "Web events" rules in the system prompt.
     """
     import pipecat.services.openai.realtime.events as events
 
-    # Build context message based on action type
     image_urls = payload.get("imageUrls", [])
     message_text = payload.get("message", "")
 
@@ -186,63 +189,47 @@ async def inject_web_context_into_llm(
     # mid-greeting and forcing a response creates overlapping audio).
     force_response = action_type != WebActionType.PAGE_OPENED
 
+    # Build factual context — describe what happened, not how to respond.
     if action_type == WebActionType.PAGE_OPENED:
-        context_text = (
-            "[CONTEXT: The user has opened the builder page on their phone. "
-            "You can reference this naturally in conversation when relevant — "
-            "e.g. 'I see you have the page open'. Do NOT interrupt yourself to acknowledge this.]"
-        )
+        context_text = "[WEB EVENT: page_opened — The user opened the builder page on their phone.]"
+
     elif action_type == WebActionType.TEXT_MESSAGE_SENT:
         if image_urls:
             urls_str = ", ".join(image_urls)
+            count = len(image_urls)
             context_text = (
-                f"[WEB PAGE UPDATE: The user just uploaded {'an image' if len(image_urls) == 1 else f'{len(image_urls)} images'} "
-                f"on the web page and typed: \"{message_text}\". "
-                f"Image URLs: {urls_str}. "
-                f"Acknowledge the image upload naturally. If they described what to do with it, "
-                f"go ahead and use the edit_website or build_website tool. "
-                f"The image URLs will be automatically included when you call the tool.]"
+                f"[WEB EVENT: text_with_images — The user typed on the web page: "
+                f"\"{message_text}\" and uploaded {count} image(s). Image URLs: {urls_str}]"
             )
         else:
             context_text = (
-                f"[WEB PAGE UPDATE: The user typed a message on the web page: \"{message_text}\". "
-                f"The builder already processed this request on the page. "
-                f"Briefly acknowledge it — say something like 'I see you made a change on the page' — "
-                f"and ask if there's anything else they'd like to adjust.]"
+                f"[WEB EVENT: text_message — The user typed on the web page: \"{message_text}\"]"
             )
+
     elif action_type == WebActionType.PROJECT_SELECTED_FROM_WEB:
         project_id = payload.get("projectId", "")
         context_text = (
-            f"[URGENT: The user has ALREADY selected a project from their phone. "
-            f"Do NOT ask which project — they already chose. "
-            f"IMMEDIATELY call select_project with project_id=\"{project_id}\". "
-            f"Say something like 'Got it, pulling that up now!' while the tool runs.]"
+            f"[WEB EVENT: project_selected — The user selected a project from the "
+            f"dashboard on their phone. project_id: \"{project_id}\"]"
         )
+
     elif action_type == WebActionType.NEW_PROJECT_REQUESTED:
-        context_text = (
-            "[WEB PAGE UPDATE: The user tapped 'Build New Website' on the dashboard. "
-            "Acknowledge this — 'Awesome, let's start fresh!' Then call create_new_project.]"
-        )
+        context_text = "[WEB EVENT: new_project — The user tapped 'Build New Website' on the dashboard.]"
+
     elif action_type == WebActionType.STEP_SELECTED:
         step_label = payload.get("stepLabel", "a step")
-        context_text = (
-            f"[WEB PAGE UPDATE: The user tapped '{step_label}' in the action steps menu. "
-            f"They want to work on this next. Acknowledge their choice and proceed to help them with it.]"
-        )
+        context_text = f"[WEB EVENT: step_selected — The user tapped \"{step_label}\" in the action steps menu.]"
+
     elif action_type == WebActionType.IMAGE_UPLOADED:
         urls_str = ", ".join(image_urls) if image_urls else "unknown"
+        count = len(image_urls) if image_urls else 0
         context_text = (
-            f"[WEB PAGE UPDATE: The user just uploaded {'an image' if len(image_urls) == 1 else f'{len(image_urls)} images'} "
-            f"on the web page. Image URLs: {urls_str}. "
-            f"Acknowledge the upload and ask what they'd like to do with it — "
-            f"use it as a hero background, section image, logo, etc. "
-            f"The image URLs will be automatically included when you call the build or edit tool.]"
+            f"[WEB EVENT: image_uploaded — The user uploaded {count} image(s) "
+            f"on the web page. Image URLs: {urls_str}]"
         )
+
     else:
-        context_text = (
-            f"[WEB PAGE UPDATE: The user performed an action on the web page: {action_type}. "
-            f"Details: {payload}. Acknowledge this naturally.]"
-        )
+        context_text = f"[WEB EVENT: {action_type} — Details: {payload}]"
 
     try:
         # Inject context as a user message into the conversation

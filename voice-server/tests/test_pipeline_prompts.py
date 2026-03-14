@@ -8,9 +8,11 @@ def test_new_user_instructions_contain_send_link():
     assert "send_builder_link" in result
 
 
-def test_new_user_instructions_exclude_select_project():
-    result = build_system_instructions(is_new_user=True, project_count=0, latest_project_name="")
-    assert "select_project" not in result
+def test_new_user_call_flow_excludes_select_project():
+    """New-user call flow layer shouldn't mention select_project — only general rules may."""
+    from src.prompts.layers import _select_call_flow
+    call_flow = _select_call_flow(is_new_user=True, project_count=0, latest_project_name="")
+    assert "select_project" not in call_flow
 
 
 def test_returning_one_project_includes_name():
