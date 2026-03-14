@@ -11,7 +11,10 @@ from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.processors.aggregators.llm_response_universal import (
     LLMContext,
     LLMContextAggregatorPair,
+    LLMUserAggregatorParams,
 )
+from pipecat.turns.user_turn_strategies import UserTurnStrategies
+from pipecat.turns.user_start.vad_user_turn_start_strategy import VADUserTurnStartStrategy
 
 from src.services.audio_recorder import CallRecorder
 
@@ -75,11 +78,31 @@ class PipelineBuilder:
         if not self._llm:
             raise ValueError("LLM is required — call .with_llm() first")
 
-        # Context aggregator with initial greeting
+        # Context aggregator with initial greeting.
+        #
+        # IMPORTANT: Override the default user turn start strategies.
+        # Default = [VADUserTurnStartStrategy, TranscriptionUserTurnStartStrategy]
+        #
+        # TranscriptionUserTurnStartStrategy fires as soon as Whisper produces
+        # ANY transcription text, triggering an interruption.  On phone calls via
+        # Twilio, echo/noise frequently produces 1-5ms "speech" events that
+        # immediately cancel the bot's response and even cancel in-progress tool
+        # calls (e.g. select_project gets cancelled mid-execution).
+        #
+        # We keep only VADUserTurnStartStrategy (which won't fire without a local
+        # VAD analyzer — there is none in this pipeline) and let OpenAI's
+        # server-side semantic VAD handle all turn detection and interruptions.
         context = LLMContext(
             messages=[{"role": "user", "content": self._greeting_prompt}] if self._greeting_prompt else [],
         )
-        context_aggregator = LLMContextAggregatorPair(context)
+        context_aggregator = LLMContextAggregatorPair(
+            context,
+            user_params=LLMUserAggregatorParams(
+                user_turn_strategies=UserTurnStrategies(
+                    start=[VADUserTurnStartStrategy()],
+                ),
+            ),
+        )
 
         # Pipeline stages
         stages: list[Any] = [
