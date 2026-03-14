@@ -213,10 +213,10 @@ async def inject_web_context_into_llm(
     elif action_type == WebActionType.PROJECT_SELECTED_FROM_WEB:
         project_id = payload.get("projectId", "")
         context_text = (
-            f"[WEB PAGE UPDATE: The user just selected a project from the dashboard on their phone. "
-            f"Project ID: {project_id}. "
-            f"Acknowledge this naturally — say something like 'Great choice, let me pull that up!' "
-            f"Then call select_project with project_id=\"{project_id}\" to load the context.]"
+            f"[URGENT: The user has ALREADY selected a project from their phone. "
+            f"Do NOT ask which project — they already chose. "
+            f"IMMEDIATELY call select_project with project_id=\"{project_id}\". "
+            f"Say something like 'Got it, pulling that up now!' while the tool runs.]"
         )
     elif action_type == WebActionType.NEW_PROJECT_REQUESTED:
         context_text = (
