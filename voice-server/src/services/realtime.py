@@ -171,8 +171,10 @@ async def inject_web_context_into_llm(
 ) -> None:
     """Inject a web page action as context into the OpenAI Realtime session.
 
-    Uses conversation.item.create + response.create to make the AI
-    immediately aware of and respond to web page events.
+    Uses conversation.item.create to add context. For most actions, also sends
+    response.create to trigger an immediate AI response. For page_opened, only
+    injects the context silently — the AI will incorporate it when it next speaks,
+    avoiding overlapping audio responses during the greeting.
     """
     import pipecat.services.openai.realtime.events as events
 
@@ -180,11 +182,15 @@ async def inject_web_context_into_llm(
     image_urls = payload.get("imageUrls", [])
     message_text = payload.get("message", "")
 
+    # page_opened is injected silently — no forced response (the AI is likely
+    # mid-greeting and forcing a response creates overlapping audio).
+    force_response = action_type != WebActionType.PAGE_OPENED
+
     if action_type == WebActionType.PAGE_OPENED:
         context_text = (
-            "[WEB PAGE UPDATE: The user just opened the builder page on their phone. "
-            "Briefly acknowledge it — something like 'Great, I see you have the page open!' "
-            "Then continue with the conversation naturally. Do NOT repeat the greeting or re-introduce yourself.]"
+            "[CONTEXT: The user has opened the builder page on their phone. "
+            "You can reference this naturally in conversation when relevant — "
+            "e.g. 'I see you have the page open'. Do NOT interrupt yourself to acknowledge this.]"
         )
     elif action_type == WebActionType.TEXT_MESSAGE_SENT:
         if image_urls:
@@ -247,12 +253,15 @@ async def inject_web_context_into_llm(
         )
         await llm.send_client_event(events.ConversationItemCreateEvent(item=item))
 
-        # Trigger the AI to respond to the injected context
-        await llm.send_client_event(
-            events.ResponseCreateEvent(
-                response=events.ResponseProperties(modalities=["audio", "text"])
+        if force_response:
+            # Trigger the AI to respond to the injected context
+            await llm.send_client_event(
+                events.ResponseCreateEvent(
+                    response=events.ResponseProperties(modalities=["audio", "text"])
+                )
             )
-        )
-        logger.info(f"Injected web context into LLM: {action_type}")
+            logger.info(f"Injected web context into LLM (with response): {action_type}")
+        else:
+            logger.info(f"Injected web context into LLM (silent): {action_type}")
     except Exception as e:
         logger.error(f"Failed to inject web context into LLM: {e}", exc_info=True)
