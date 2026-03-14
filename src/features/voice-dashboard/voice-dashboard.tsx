@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSupabaseBrowser } from '@/services/supabase/browser'
 import { CALL_EVENTS, WEB_ACTION_TYPES } from '@/lib/events/call-events'
@@ -38,6 +38,19 @@ export function VoiceDashboard({
     }).catch(() => {})
   }, [callSid])
 
+  // Track if we've already navigated to prevent double-navigation
+  const navigatedRef = useRef(false)
+
+  const navigateToBuild = useCallback(
+    (projectId: string, source: string) => {
+      if (navigatedRef.current) return
+      navigatedRef.current = true
+      console.log(`[VoiceDashboard] Navigating to /build/${projectId} (source: ${source})`)
+      router.push(`/build/${projectId}?session=${callSid}`)
+    },
+    [callSid, router]
+  )
+
   // Subscribe to Realtime channel for voice events
   useEffect(() => {
     const supabase = getSupabaseBrowser()
@@ -46,25 +59,59 @@ export function VoiceDashboard({
     channel
       .on('broadcast', { event: CALL_EVENTS.PROJECT_SELECTED }, (payload) => {
         const projectId = payload.payload?.projectId
+        console.log(`[VoiceDashboard] PROJECT_SELECTED event received:`, projectId)
         if (projectId) {
-          router.push(`/build/${projectId}?session=${callSid}`)
+          navigateToBuild(projectId, 'project_selected')
         }
       })
       .on('broadcast', { event: CALL_EVENTS.PREVIEW_UPDATED }, (payload) => {
         const projectId = payload.payload?.projectId
+        console.log(`[VoiceDashboard] PREVIEW_UPDATED event received:`, projectId)
         if (projectId) {
-          router.push(`/build/${projectId}?session=${callSid}`)
+          navigateToBuild(projectId, 'preview_updated')
         }
       })
       .on('broadcast', { event: CALL_EVENTS.CALL_ENDED }, () => {
+        console.log(`[VoiceDashboard] CALL_ENDED event received`)
         setCallActive(false)
       })
-      .subscribe()
+      .subscribe((status) => {
+        console.log(`[VoiceDashboard] Realtime subscription status: ${status}`)
+      })
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [callSid, router])
+  }, [callSid, navigateToBuild])
+
+  // Fallback reconciliation: poll state endpoint to catch missed Realtime events.
+  // Only navigate if the project_id CHANGED from what was present at page load.
+  useEffect(() => {
+    const poll = async () => {
+      if (navigatedRef.current) return
+      try {
+        const res = await fetch(`/api/voice/state/${callSid}`)
+        if (!res.ok) return
+        const data = await res.json()
+        // Navigate only if a project was assigned/changed after page load
+        if (data.projectId && data.projectId !== activeProjectId && !navigatedRef.current) {
+          console.log(`[VoiceDashboard] Reconciliation: project changed ${activeProjectId} → ${data.projectId}`)
+          navigateToBuild(data.projectId, 'reconciliation')
+        }
+      } catch {
+        // Ignore fetch errors during polling
+      }
+    }
+
+    // Start polling after a short delay (give Realtime a chance first)
+    const initialTimeout = setTimeout(poll, 3000)
+    const interval = setInterval(poll, 5000)
+
+    return () => {
+      clearTimeout(initialTimeout)
+      clearInterval(interval)
+    }
+  }, [callSid, activeProjectId, navigateToBuild])
 
   const broadcastAction = useCallback(
     (actionType: string, data: Record<string, unknown> = {}) => {
