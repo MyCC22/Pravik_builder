@@ -1,11 +1,13 @@
 """Tool: build_website — Build a new website based on the user description."""
 
 import asyncio
+import datetime
 import logging
+import uuid
 
 from src.tools._base import ToolDefinition, ToolContext, _clean_project_name
 from src.tools._helpers import send_sms_if_needed, call_api_with_retry, inject_site_context
-from src.services.call_session import save_call_message, update_call_state
+from src.services.call_session import save_call_message, update_call_state, update_call_session_project
 from src.services.realtime import (
     broadcast_preview_update,
     broadcast_step_completed,
@@ -16,9 +18,33 @@ from src.services.supabase_client import get_supabase_client
 logger = logging.getLogger(__name__)
 
 
+async def _ensure_project(ctx: ToolContext) -> None:
+    """Auto-create a project if none is set (returning user skipped create_new_project)."""
+    if ctx.state.project_id:
+        return
+    supabase = await get_supabase_client()
+    project_id = str(uuid.uuid4())
+    await (
+        supabase.table("projects")
+        .insert(
+            {
+                "id": project_id,
+                "user_id": ctx.identity.user_id,
+                "name": f"Voice Build {datetime.date.today().strftime('%m/%d/%Y')}",
+                "source": "voice",
+            }
+        )
+        .execute()
+    )
+    ctx.state.switch_project(project_id)
+    await update_call_session_project(ctx.identity.call_sid, project_id)
+    logger.info(f"[{ctx.identity.call_sid}] Auto-created project {project_id} (AI skipped create_new_project)")
+
+
 async def handle(ctx: ToolContext, params):
     description = params.arguments.get("description", "")
     try:
+        await _ensure_project(ctx)
         await send_sms_if_needed(ctx)
         await update_call_state(ctx.identity.call_sid, "building")
 

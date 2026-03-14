@@ -2,6 +2,7 @@
 
 import datetime
 import logging
+import uuid
 
 from src.tools._base import ToolDefinition, ToolContext
 from src.services.call_session import save_call_message, update_call_session_project
@@ -14,28 +15,27 @@ logger = logging.getLogger(__name__)
 async def handle(ctx: ToolContext, params):
     try:
         supabase = await get_supabase_client()
-        resp = await (
+        project_id = str(uuid.uuid4())
+        await (
             supabase.table("projects")
             .insert(
                 {
+                    "id": project_id,
                     "user_id": ctx.identity.user_id,
                     "name": f"Voice Build {datetime.date.today().strftime('%m/%d/%Y')}",
                     "source": "voice",
                 }
             )
-            .select()
-            .single()
             .execute()
         )
-        new_project = resp.data
-        ctx.state.switch_project(new_project["id"])
+        ctx.state.switch_project(project_id)
 
-        await update_call_session_project(ctx.identity.call_sid, new_project["id"])
-        await broadcast_project_selected(ctx.identity.call_sid, new_project["id"])
+        await update_call_session_project(ctx.identity.call_sid, project_id)
+        await broadcast_project_selected(ctx.identity.call_sid, project_id)
         await save_call_message(
             call_session_id=ctx.identity.session_id,
             role="system",
-            content=f"Created new project {new_project['id']}",
+            content=f"Created new project {project_id}",
         )
         await params.result_callback(
             {
