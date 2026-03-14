@@ -84,6 +84,7 @@ CRITICAL — edit_block vs change_image distinction:
 - "add a booking form", "add a contact form", "add lead capture" → add_tool
 - "add a contact section", "add a features section" → add_block (HTML section, NOT a tool)
 - Key distinction: form-specific language (fields, dropdown, required, form fields) → tool intents. Section-specific language (section, block) → block intents.
+- IMPORTANT: "headline", "title", "heading", "text", "description", "paragraph", "button text", "subtitle", "tagline" changes are ALWAYS edit_block, NEVER edit_tool. edit_tool is ONLY for booking/lead form structure (fields, dropdowns, required flags).
 - "connect button to booking", "link CTA to booking form", "make the button go to booking", "wire button to form" → edit_block on the hero or cta block (this changes the HTML href, not the tool config)
 - "button doesn't work", "CTA link is broken", "button goes to wrong place" → edit_block on the hero or cta block
 - When the user wants to change WHERE a button links to, that's always edit_block (changing HTML), not edit_tool

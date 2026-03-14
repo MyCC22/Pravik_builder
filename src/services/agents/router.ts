@@ -48,5 +48,24 @@ export async function routeIntent(
   const text = response.content[0].type === 'text' ? response.content[0].text : ''
   const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim()
 
-  return JSON.parse(cleaned) as RouterResult
+  try {
+    return JSON.parse(cleaned) as RouterResult
+  } catch {
+    // Haiku sometimes returns invalid JSON — try to extract a JSON object
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      try {
+        return JSON.parse(jsonMatch[0]) as RouterResult
+      } catch {
+        // Fall through to clarify
+      }
+    }
+    console.warn(`[router] Failed to parse router response: "${cleaned.substring(0, 200)}"`)
+    return {
+      intent: 'clarify',
+      description: message,
+      question: "I'm not sure what you'd like me to change. Could you describe the edit you want?",
+      target_blocks: [],
+    } as RouterResult
+  }
 }
