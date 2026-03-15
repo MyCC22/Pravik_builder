@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { createClient } from '@supabase/supabase-js'
 import { getGeneratorPrompt } from './prompts/generator'
 import { TEMPLATE_IDS, THEME_IDS, resolveTemplateId } from '@/templates/types'
 import type { TemplateConfig, TemplateId, ThemeId } from '@/templates/types'
@@ -14,6 +15,15 @@ function getClient(): Anthropic {
     client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   }
   return client
+}
+
+// Use service role key for server-side tool writes (RLS requires auth.uid() for
+// owner-only INSERT, but server agents don't have a user session)
+function getServiceSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 }
 
 function splitHtmlIntoBlocks(html: string): { block_type: string; html: string }[] {
@@ -401,7 +411,7 @@ async function createHeroRegistrationTool(
   projectId: string,
   config: HeroFormConfig
 ): Promise<{ toolId: string; fields: ToolField[] }> {
-  const supabase = getSupabaseClient()
+  const supabase = getServiceSupabase()
 
   const { data, error } = await supabase
     .from('tools')
