@@ -105,6 +105,41 @@ Event templates:
 - "schedule": [{"time": "9:00 AM", "title": "string", "speaker": "string", "description": "string"}] — 5-10 agenda items
 - "pricing": same as landing (for ticket tiers)
 - "faq": same as services
+
+Hero Registration Form (optional — AI decides):
+Decide whether this business would benefit from an inline lead-capture form in the hero section.
+- Most service businesses, agencies, consultancies, and appointment-based businesses SHOULD have one.
+- Restaurants with menus, event pages with ticketing links, or pure portfolio/ecommerce sites may NOT need one.
+
+Set "includeHeroForm": true/false in the content object.
+If true, also provide a top-level "heroFormConfig" object (NOT inside content) with:
+- "formTitle": short action-oriented heading (e.g., "Get Your Free Quote")
+- "submitText": button label (e.g., "Get Started", "Book Now")
+- "successMessage": thank-you text shown inline after submission
+- "fields": array of 2-4 fields, each with: name, label, type, required, placeholder, options (for dropdowns)
+
+Hero form field rules:
+- Use a single "name" field (never split into first/last name)
+- Allowed field types: text, email, phone, dropdown ONLY
+- Every form MUST have at least: name (text, required) + email (email, required)
+- Maximum 4 fields total
+- When generating for an unlisted or unknown business category, default to: name, email, phone
+
+Category hints for hero form fields:
+- consulting/agency → Name, Email, Company
+- salon/spa/beauty → Name, Phone, Service (dropdown)
+- restaurant → NO hero form (use booking CTA instead)
+- fitness/gym → Name, Email, Phone
+- medical/dental/healthcare → Name, Phone, Preferred Time (dropdown)
+- legal/finance → Name, Email, Brief Description (text)
+- education/tutoring → Name, Email, Subject (dropdown)
+- real_estate → Name, Email, Phone
+- event → NO hero form (use ticket links instead)
+- ecommerce → NO hero form (use product CTAs instead)
+- photography/portfolio → Name, Email
+- unknown/other → Name, Email, Phone (safe fallback)
+
+When encountering a new business category, ALWAYS define hero form fields for it. Follow the pattern above.
 `
 
 export function getTemplateDescriptions(): string {
@@ -164,6 +199,8 @@ Return format:
 {
   "template": "template-id",
   "theme": "theme-id",
-  "content": { ...all content fields }
-}`
+  "content": { ...all content fields, "includeHeroForm": true/false },
+  "heroFormConfig": { "formTitle": "...", "submitText": "...", "successMessage": "...", "fields": [...] }
+}
+Note: "heroFormConfig" is ONLY included when "includeHeroForm" is true. It sits at the top level alongside "template" and "theme", NOT inside "content".`
 }
