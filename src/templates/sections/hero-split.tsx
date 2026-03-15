@@ -1,11 +1,11 @@
 import type { ThemeClasses } from '../theme-classes'
 import { escapeHtml } from '../utils'
 
-export function renderHeroSplit(title: string, subtitle: string, t: ThemeClasses, tagline?: string, ctaText?: string, ctaUrl = '#contact', heroImageUrl?: string): string {
+export function renderHeroSplit(title: string, subtitle: string, t: ThemeClasses, tagline?: string, ctaText?: string, ctaUrl = '#contact', heroImageUrl?: string, heroFormHtml?: string): string {
   const taglineHtml = tagline
     ? `<span class="inline-block ${t.taglineBg} px-4 py-1.5 rounded-full text-sm font-semibold mb-6">${escapeHtml(tagline)}</span>`
     : ''
-  const ctaHtml = ctaText
+  const ctaHtml = ctaText && !heroFormHtml
     ? `<div class="mt-10">
         <a href="${escapeHtml(ctaUrl)}" class="${t.accentBg} ${t.accentBgHover} ${t.accentText} px-8 py-4 text-base font-semibold rounded-full shadow-lg transition-all duration-200">${escapeHtml(ctaText)}</a>
       </div>`
@@ -27,11 +27,13 @@ export function renderHeroSplit(title: string, subtitle: string, t: ThemeClasses
       <p class="mt-6 text-lg leading-8 ${t.textMuted}">${escapeHtml(subtitle)}</p>
       ${ctaHtml}
     </div>
-    <div class="relative">
+    ${heroFormHtml
+      ? `<div class="flex items-center">${heroFormHtml}</div>`
+      : `<div class="relative">
       <div class="aspect-[4/3] rounded-3xl ${imageBgClass} ${t.border} overflow-hidden shadow-2xl">
         ${imageHtml}
       </div>
-    </div>
+    </div>`}
   </div>
 </section>`
 }
