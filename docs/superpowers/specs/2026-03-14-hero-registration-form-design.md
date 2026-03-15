@@ -71,24 +71,24 @@ Each of the 4 themes (clean, bold, vibrant, warm) defines these properties in `t
 - Zero hardcoded colors in `renderHeroForm()` — everything comes from `ThemeClasses`
 - Button uses existing `t.accentBg` + `t.accentText` + `rounded-full` (matching the pill-shaped CTA pattern from the retheme)
 - Card uses existing `t.cardShadow` for shadow consistency
-- Form card radius matches `t.cardRadius` or uses `rounded-2xl` to match the section card pattern
+- Form card uses `rounded-2xl` for border radius (consistent with section card pattern — no `cardRadius` property exists in ThemeClasses)
 
 ---
 
 ## 3. Hero Variant Integration
 
 ### Parameter Addition
-Each hero renderer gets an optional last parameter:
+Each hero renderer gets an optional last parameter. Note the existing parameter orders differ per variant:
 
 ```typescript
-// hero-center.tsx
+// hero-center.tsx (existing order: title, subtitle, t, ctaText, ctaUrl, heroImageUrl, tagline)
 renderHeroCenter(title, subtitle, t, ctaText, ctaUrl, heroImageUrl, tagline, heroFormHtml?)
 
-// hero-bold.tsx
+// hero-bold.tsx (existing order: title, subtitle, t, ctaText, ctaUrl, heroImageUrl, tagline)
 renderHeroBold(title, subtitle, t, ctaText, ctaUrl, heroImageUrl, tagline, heroFormHtml?)
 
-// hero-split.tsx
-renderHeroSplit(title, subtitle, t, ctaText, ctaUrl, heroImageUrl, tagline, heroFormHtml?)
+// hero-split.tsx (existing order: title, subtitle, t, tagline, ctaText, ctaUrl, heroImageUrl)
+renderHeroSplit(title, subtitle, t, tagline, ctaText, ctaUrl, heroImageUrl, heroFormHtml?)
 ```
 
 ### Positioning Per Variant
@@ -167,6 +167,19 @@ default to Name (text, required), Email (email, required), Phone (phone, optiona
 
 ## 5. Tool Creation Flow
 
+### HeroFormConfig Type Definition
+```typescript
+// In src/services/agents/types.ts (alongside existing ToolConfig)
+interface HeroFormConfig {
+  formTitle: string        // "Get Your Free Quote"
+  submitText: string       // "Get Started"
+  successMessage: string   // "Thanks! We will be in touch soon."
+  fields: ToolField[]      // 2-4 fields (reuses existing ToolField type)
+}
+```
+
+This is a **distinct type** from the existing `ToolConfig` (which has `title`, `subtitle`, `trustSignals`, and allows `textarea`/`number` field types). `HeroFormConfig` is leaner — no subtitle, no trust signals, restricted field types.
+
 ### During `generateWebsite()` in `generator.ts`:
 
 1. AI returns JSON with `includeHeroForm: true` and `heroFormConfig`
@@ -176,10 +189,12 @@ default to Name (text, required), Email (email, required), Phone (phone, optiona
    - Rejects `textarea` and `number` field types (drops them)
    - Validates field names are snake_case
    - Ensures `submitText` and `successMessage` are non-empty strings (applies defaults if empty)
-3. Generator calls `createHeroRegistrationTool(projectId, heroFormConfig)`:
-   - Inserts into `tools` table: `tool_type = 'hero_registration'`, `is_active = true`
-   - Config stored as JSON with `title`, `subtitle`, `submitText`, `successMessage`, `fields`
-   - Returns `toolId`
+3. Generator calls `createHeroRegistrationTool(projectId, validatedConfig)`:
+   - **Location**: new function in `src/services/agents/generator.ts`
+   - **Signature**: `async function createHeroRegistrationTool(projectId: string, config: HeroFormConfig): Promise<{ toolId: string; fields: ToolField[] }>`
+   - Inserts into `tools` table using Supabase service role client: `tool_type = 'hero_registration'`, `is_active = true`
+   - Config stored as JSON with `formTitle`, `submitText`, `successMessage`, `fields` (no `subtitle` or `trustSignals` — those belong to the booking tool's `ToolConfig`, not `HeroFormConfig`)
+   - Returns `{ toolId, fields }` so both can be set on `TemplateConfig`
 4. `toolId` + `fields` are passed into template rendering
 5. Template composition file calls `renderHeroForm(toolId, fields, t, ...)` and passes result to the hero renderer
 
@@ -211,7 +226,7 @@ function validateHeroFormConfig(config: HeroFormConfig): HeroFormConfig {
 
 ## 6. TemplateContent Type Extensions
 
-### New Fields in `types.ts`
+### New Fields in `TemplateContent` (in `types.ts`)
 ```typescript
 // Hero registration form (optional — AI decides)
 includeHeroForm?: boolean
@@ -220,7 +235,16 @@ heroFormSubmitText?: string    // "Get Started"
 heroFormSuccessMessage?: string // "Thanks! We will be in touch soon."
 ```
 
-The actual `fields` array and `toolId` live in the `tools` table, not in `TemplateContent`. This maintains the existing separation between content config and tool config.
+These are the AI-generated display strings that live alongside other content fields.
+
+### New Fields in `TemplateConfig` (in `types.ts`)
+```typescript
+// Set by generator.ts after creating the hero_registration tool
+heroToolId?: string            // ID of the tools row (for form submission)
+heroFormFields?: ToolField[]   // Validated fields (for rendering the form inputs)
+```
+
+These are set programmatically by the generator after `createHeroRegistrationTool()` returns, NOT by the AI. They bridge the `tools` table data into the template rendering pipeline.
 
 ---
 
@@ -244,8 +268,19 @@ sections.push(renderHeroCenter(
 ))
 ```
 
-### renderTemplate() Extension
-`renderTemplate()` in `render.ts` receives the optional `heroToolId` and `heroFormFields` to pass through to template composition. These come from the generation pipeline which creates the tool row.
+### Data Threading — How heroToolId/heroFormFields Reach Templates
+
+The generation pipeline needs to pass `heroToolId` and `heroFormFields` into the template rendering. The approach:
+
+1. **Add to `TemplateConfig`** (not `TemplateContent`): Two new optional fields on the top-level `TemplateConfig` object:
+   ```typescript
+   // In types.ts — added to TemplateConfig (NOT TemplateContent)
+   heroToolId?: string
+   heroFormFields?: ToolField[]
+   ```
+2. **`renderTemplate(config)` in `render.ts`** already receives the full `TemplateConfig`. Each template composition function (e.g., `renderLanding(config)`) receives it too. They extract `config.heroToolId` and `config.heroFormFields` to build the `heroFormHtml`.
+3. **In `generator.ts`**: After `createHeroRegistrationTool()` returns the `toolId`, the generator sets `config.heroToolId = toolId` and `config.heroFormFields = validatedFields` on the `TemplateConfig` before calling `renderTemplate()`.
+4. **`render-blocks.ts`**: No changes needed. The hero form HTML is already baked into the hero block HTML at generation time and stored in the `blocks` table. When `renderFromBlocks()` reconstructs the page, the form is already part of the hero block content.
 
 ### Coexistence with Booking CTA
 When `includeHeroForm` is true, the booking CTA section still renders if present (services/restaurant templates). They serve different purposes:
@@ -307,15 +342,15 @@ The form card transforms in-place:
 | File | Change |
 |------|--------|
 | `src/templates/theme-classes.ts` | Add `formCardBg`, `formInputBg`, `formInputBorder`, `formInputText`, `formLabelText` per theme |
-| `src/templates/types.ts` | Add `includeHeroForm`, `heroFormTitle`, `heroFormSubmitText`, `heroFormSuccessMessage` |
+| `src/templates/types.ts` | Add `includeHeroForm`, `heroFormTitle`, `heroFormSubmitText`, `heroFormSuccessMessage` to `TemplateContent`; add `heroToolId`, `heroFormFields` to `TemplateConfig` |
 | `src/templates/sections/hero-center.tsx` | Add optional `heroFormHtml` parameter, position form with overlap |
 | `src/templates/sections/hero-bold.tsx` | Add optional `heroFormHtml` parameter, position form with overlap |
 | `src/templates/sections/hero-split.tsx` | Add optional `heroFormHtml` parameter, position form in right column |
 | `src/templates/render.ts` | Pass `heroToolId`/`heroFormFields` through to template composition |
-| `src/templates/render-blocks.ts` | Same pass-through for block-based rendering |
+| `src/templates/render-blocks.ts` | No changes needed — hero form HTML is already baked into blocks at generation time |
 | `src/services/agents/generator.ts` | Add `validateHeroFormConfig()`, `createHeroRegistrationTool()`, wire into generation pipeline |
 | `src/services/agents/prompts/generator.ts` | Add hero form instructions, category hints, field rules |
-| `src/services/agents/prompts/tool-generator.ts` | Add category hint enforcement for new categories |
+| `src/services/agents/types.ts` | Add `HeroFormConfig` interface |
 | `src/templates/landing.tsx` | Wire `heroFormHtml` to hero renderer |
 | `src/templates/landing-bold.tsx` | Wire `heroFormHtml` to hero renderer |
 | `src/templates/services.tsx` | Wire `heroFormHtml` to hero renderer |
