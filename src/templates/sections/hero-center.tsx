@@ -1,7 +1,7 @@
 import type { ThemeClasses } from '../theme-classes'
 import { escapeHtml } from '../utils'
 
-export function renderHeroCenter(title: string, subtitle: string, t: ThemeClasses, ctaText?: string, ctaUrl = '#contact', heroImageUrl?: string, tagline?: string): string {
+export function renderHeroCenter(title: string, subtitle: string, t: ThemeClasses, ctaText?: string, ctaUrl = '#contact', heroImageUrl?: string, tagline?: string, heroFormHtml?: string): string {
   const hasImage = !!heroImageUrl
 
   const taglineHtml = tagline
@@ -9,7 +9,7 @@ export function renderHeroCenter(title: string, subtitle: string, t: ThemeClasse
     : ''
 
   // Both image and gradient heroes use light-on-dark styling
-  const ctaHtml = ctaText
+  const ctaHtml = ctaText && !heroFormHtml
     ? `<div class="mt-10 flex items-center justify-center gap-x-6">
         <a href="${escapeHtml(ctaUrl)}" class="bg-white text-slate-900 hover:bg-slate-100 px-8 py-4 text-base font-semibold rounded-full shadow-lg transition-all duration-200">${escapeHtml(ctaText)}</a>
         <a href="#features" class="text-white/80 hover:text-white text-sm font-semibold transition-colors">Learn more <span aria-hidden="true">&rarr;</span></a>
@@ -25,6 +25,7 @@ export function renderHeroCenter(title: string, subtitle: string, t: ThemeClasse
     <p class="mt-6 text-lg leading-8 text-white/80 sm:text-xl">${escapeHtml(subtitle)}</p>
     ${ctaHtml}
   </div>
+  ${heroFormHtml || ''}
 </section>`
   }
 
@@ -36,5 +37,6 @@ export function renderHeroCenter(title: string, subtitle: string, t: ThemeClasse
     <p class="mt-6 text-lg leading-8 ${t.heroGradientTextMuted} sm:text-xl">${escapeHtml(subtitle)}</p>
     ${ctaHtml}
   </div>
+  ${heroFormHtml || ''}
 </section>`
 }
