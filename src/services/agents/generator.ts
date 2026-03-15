@@ -5,7 +5,7 @@ import type { TemplateConfig, TemplateId, ThemeId } from '@/templates/types'
 import { renderTemplate } from '@/templates/render'
 import { getSupabaseClient } from '@/services/supabase/client'
 import { fetchTemplateImages } from '@/services/unsplash/image-fetcher'
-import type { Block } from './types'
+import type { Block, HeroFormConfig, ToolField } from './types'
 
 let client: Anthropic | null = null
 
@@ -357,6 +357,76 @@ function validateRequiredFields(config: TemplateConfig): TemplateConfig {
   return { ...config, content }
 }
 
+/**
+ * Validate and sanitize hero form config from AI output.
+ * Ensures field count, types, and required name/email presence.
+ */
+function validateHeroFormConfig(config: Partial<HeroFormConfig>): HeroFormConfig {
+  // Filter to allowed types, enforce snake_case names, cap at 4
+  let fields = (config.fields || [])
+    .filter((f: ToolField) => ['text', 'email', 'phone', 'dropdown'].includes(f.type))
+    .map((f: ToolField) => ({
+      ...f,
+      name: f.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''),
+    }))
+    .slice(0, 4)
+
+  // Ensure name and email fields exist
+  const hasName = fields.some((f: ToolField) => f.type === 'text' && f.name === 'name')
+  const hasEmail = fields.some((f: ToolField) => f.type === 'email')
+
+  if (!hasEmail) {
+    fields.unshift({ name: 'email', label: 'Email', type: 'email', required: true, placeholder: 'Your email' })
+  }
+  if (!hasName) {
+    fields.unshift({ name: 'name', label: 'Name', type: 'text', required: true, placeholder: 'Your name' })
+  }
+
+  // Re-cap after potential injection
+  fields = fields.slice(0, 4)
+
+  return {
+    formTitle: config.formTitle || 'Get Started',
+    submitText: config.submitText || 'Submit',
+    successMessage: config.successMessage || 'Thanks! We will be in touch soon.',
+    fields,
+  }
+}
+
+/**
+ * Creates a hero_registration tool in the database.
+ * Returns the tool ID and validated fields for template rendering.
+ */
+async function createHeroRegistrationTool(
+  projectId: string,
+  config: HeroFormConfig
+): Promise<{ toolId: string; fields: ToolField[] }> {
+  const supabase = getSupabaseClient()
+
+  const { data, error } = await supabase
+    .from('tools')
+    .insert({
+      project_id: projectId,
+      tool_type: 'hero_registration',
+      config: {
+        title: config.formTitle,
+        submitText: config.submitText,
+        successMessage: config.successMessage,
+        fields: config.fields,
+      },
+      is_active: true,
+    })
+    .select('id')
+    .single()
+
+  if (error || !data) {
+    console.error('Failed to create hero_registration tool:', error?.message)
+    throw new Error(`Failed to create hero registration tool: ${error?.message}`)
+  }
+
+  return { toolId: data.id, fields: config.fields }
+}
+
 export async function generateSite(
   message: string,
   projectId: string
@@ -390,6 +460,33 @@ export async function generateSite(
 
   // Post-generation: strip sections that don't belong on this template/business
   config = validateSections(config, message)
+
+  // Create hero registration tool if AI decided to include one
+  if (parsed.content?.includeHeroForm && (parsed as unknown as Record<string, unknown>).heroFormConfig) {
+    try {
+      const rawHeroConfig = (parsed as unknown as Record<string, unknown>).heroFormConfig as Partial<HeroFormConfig>
+      const validatedHeroConfig = validateHeroFormConfig(rawHeroConfig)
+      const { toolId, fields: heroFields } = await createHeroRegistrationTool(projectId, validatedHeroConfig)
+
+      config = {
+        ...config,
+        heroToolId: toolId,
+        heroFormFields: heroFields,
+      }
+
+      // Pass display strings from AI to content
+      config.content = {
+        ...config.content,
+        includeHeroForm: true,
+        heroFormTitle: validatedHeroConfig.formTitle,
+        heroFormSubmitText: validatedHeroConfig.submitText,
+        heroFormSuccessMessage: validatedHeroConfig.successMessage,
+      }
+    } catch (err) {
+      console.error('Hero registration tool creation failed, skipping:', err)
+      // Non-fatal — site generates without inline form
+    }
+  }
 
   return renderAndStoreBlocks(config, projectId)
 }
