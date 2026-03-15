@@ -1,7 +1,6 @@
 'use client'
 
 import { ReactNode, useState, useEffect } from 'react'
-import { VoiceCallBanner } from './voice-call-banner'
 import { ActionStepsTab } from '@/features/action-steps/action-steps-tab'
 import { ActionStepsDrawer } from '@/features/action-steps/action-steps-drawer'
 
@@ -61,7 +60,6 @@ export function BuilderLayout({
         }`}
       >
         {preview}
-        {isVoiceCall && <VoiceCallBanner callActive={!!callActive} />}
         {shareUrl && (
           <div className="absolute top-2 right-2 z-10">
             <a
