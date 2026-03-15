@@ -202,8 +202,8 @@ export default function BuilderPage() {
     // Reconcile immediately on mount (handles page reload recovery)
     reconcile()
 
-    // Reconcile every 10 seconds (handles missed broadcasts)
-    const interval = setInterval(reconcile, 10_000)
+    // Reconcile every 5 seconds (handles missed broadcasts, mobile WebSocket drops)
+    const interval = setInterval(reconcile, 5_000)
 
     // Reconcile when tab becomes visible (handles tab switching back)
     function onVisibilityChange() {

@@ -1700,7 +1700,7 @@ export const STOCK_IMAGES: Record<string, StockCategory> = {
     ],
   },
   'dental': {
-    keywords: ["dental","dentist","orthodontist","teeth"],
+    keywords: ["dental","dentist","orthodontist","teeth","oral","dental office","dental care"],
     images: [
       {
         regular: 'https://images.unsplash.com/photo-1675526607070-f5cbd71dde92?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4OTI3MzJ8MHwxfHNlYXJjaHwxfHxkZW50aXN0JTIwZGVudGFsJTIwY2xpbmljJTIwdGVldGglMjBzbWlsZXxlbnwwfDB8fHwxNzczMzc0MTUwfDA&ixlib=rb-4.1.0&q=80&w=1080',
@@ -1915,7 +1915,7 @@ export const STOCK_IMAGES: Record<string, StockCategory> = {
     ],
   },
   'medical': {
-    keywords: ["medical","clinic","doctor","healthcare","hospital","physician"],
+    keywords: ["medical","clinic","doctor","healthcare","hospital","physician","urgent care","walk-in clinic","family medicine"],
     images: [
       {
         regular: 'https://images.unsplash.com/photo-1758691461516-7e716e0ca135?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4OTI3MzJ8MHwxfHNlYXJjaHwxfHxkb2N0b3IlMjBtZWRpY2FsJTIwY2xpbmljJTIwaG9zcGl0YWwlMjBoZWFsdGhjYXJlfGVufDB8MHx8fDE3NzMzNzQxNTJ8MA&ixlib=rb-4.1.0&q=80&w=1080',
@@ -2990,7 +2990,7 @@ export const STOCK_IMAGES: Record<string, StockCategory> = {
     ],
   },
   'plumbing': {
-    keywords: ["plumbing","plumber","pipe","leak","faucet"],
+    keywords: ["plumbing","plumber","pipe","leak","faucet","drain","water heater","sewer"],
     images: [
       {
         regular: 'https://images.unsplash.com/photo-1760126722520-0cc43cede2b5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4OTI3MzJ8MHwxfHNlYXJjaHwxfHxwbHVtYmVyJTIwcGx1bWJpbmclMjByZXBhaXIlMjBwaXBlJTIwZmF1Y2V0JTIwYmF0aHJvb218ZW58MHwwfHx8MTc3MzM3NDE2NXww&ixlib=rb-4.1.0&q=80&w=1080',
@@ -3205,7 +3205,7 @@ export const STOCK_IMAGES: Record<string, StockCategory> = {
     ],
   },
   'electrician': {
-    keywords: ["electrician","electrical","wiring","power"],
+    keywords: ["electrician","electrical","wiring","power","circuit","outlet","panel","lighting installation"],
     images: [
       {
         regular: 'https://images.unsplash.com/photo-1643290976205-c2e467a65e9c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4OTI3MzJ8MHwxfHNlYXJjaHwxfHxlbGVjdHJpY2lhbiUyMGVsZWN0cmljYWwlMjB3aXJpbmclMjB0b29scyUyMHJlcGFpcnxlbnwwfDB8fHwxNzczMzc0MTY4fDA&ixlib=rb-4.1.0&q=80&w=1080',
@@ -3420,7 +3420,7 @@ export const STOCK_IMAGES: Record<string, StockCategory> = {
     ],
   },
   'landscaping': {
-    keywords: ["landscaping","garden","lawn","outdoor","yard"],
+    keywords: ["landscaping","garden","lawn","outdoor","yard","gardener","gardening","tree service","lawn care","sprinkler","hedge"],
     images: [
       {
         regular: 'https://images.unsplash.com/photo-1756885703090-1c12a78f5749?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4OTI3MzJ8MHwxfHNlYXJjaHwxfHxnYXJkZW4lMjBsYW5kc2NhcGUlMjBsYXduJTIwZ3JlZW4lMjBvdXRkb29yfGVufDB8MHx8fDE3NzMzNzQyNjV8MA&ixlib=rb-4.1.0&q=80&w=1080',
@@ -4065,7 +4065,7 @@ export const STOCK_IMAGES: Record<string, StockCategory> = {
     ],
   },
   'cleaning': {
-    keywords: ["cleaning","maid","janitorial","housekeeping"],
+    keywords: ["cleaning","maid","janitorial","housekeeping","cleaner","house cleaning","carpet cleaning","pressure washing","window cleaning"],
     images: [
       {
         regular: 'https://images.unsplash.com/photo-1758273238370-3bc08e399620?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4OTI3MzJ8MHwxfHNlYXJjaHwxfHxjbGVhbmluZyUyMHNlcnZpY2UlMjBob21lJTIwcHJvZmVzc2lvbmFsJTIwaG91c2VrZWVwaW5nfGVufDB8MHx8fDE3NzMzNzQxNzZ8MA&ixlib=rb-4.1.0&q=80&w=1080',
@@ -6665,7 +6665,7 @@ export const STOCK_IMAGES: Record<string, StockCategory> = {
     ],
   },
   'kids-bootcamp': {
-    keywords: ["kids bootcamp","kids camp","children camp","summer camp","youth program"],
+    keywords: ["kids bootcamp","kids camp","children camp","summer camp","youth program","soccer","football","basketball","swim","tennis","youth sports","sports academy","kids sports","kids classes","after school program"],
     images: [
       {
         regular: 'https://images.unsplash.com/photo-1599376672737-bd66af54c8f5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4OTI3MzJ8MHwxfHNlYXJjaHwxfHxraWRzJTIwY2FtcCUyMGNoaWxkcmVuJTIwb3V0ZG9vciUyMGFjdGl2aXRpZXMlMjBncm91cHxlbnwwfDB8fHwxNzczMzc0NzA0fDA&ixlib=rb-4.1.0&q=80&w=1080',
@@ -9465,7 +9465,7 @@ export const STOCK_IMAGES: Record<string, StockCategory> = {
     ],
   },
   'law': {
-    keywords: ["law","attorney","lawyer","legal","law firm"],
+    keywords: ["law","attorney","lawyer","legal","law firm","immigration","family law","immigration lawyer","family lawyer","divorce lawyer","visa","green card"],
     images: [
       {
         regular: 'https://images.unsplash.com/photo-1758518726869-01aff69a56e3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4OTI3MzJ8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBidXNpbmVzcyUyMG9mZmljZSUyMGNvcnBvcmF0ZXxlbnwwfDB8fHwxNzczMzc0NDM5fDA&ixlib=rb-4.1.0&q=80&w=1080',
@@ -9685,7 +9685,7 @@ export const STOCK_IMAGES: Record<string, StockCategory> = {
 /**
  * All valid category IDs for use in generator prompts.
  */
-export const CATEGORY_IDS = ["yoga","fitness","spa","salon","restaurant","cafe","bakery","bar","dental","medical","veterinary","real-estate","accounting","insurance","plumbing","electrician","landscaping","auto-repair","construction","cleaning","moving","photography","videography","music","dance","art","education","test-prep","driving-school","language-school","music-lessons","tutoring","nursing-school","medical-school","adult-certification","kids-bootcamp","kids-coding","martial-arts","tech","marketing","web-design","consulting","coaching","wedding","event","catering","florist","fashion","interior-design","law"] as const
+export const CATEGORY_IDS = ["yoga","fitness","spa","salon","restaurant","cafe","bakery","bar","dental","medical","veterinary","real-estate","accounting","insurance","plumbing","electrician","landscaping","auto-repair","hvac","garage-door","med-spa","construction","cleaning","moving","photography","videography","music","dance","art","education","test-prep","driving-school","language-school","music-lessons","tutoring","nursing-school","medical-school","adult-certification","kids-bootcamp","kids-coding","martial-arts","tech","marketing","web-design","consulting","coaching","wedding","event","catering","florist","fashion","interior-design","law"] as const
 
 export type CategoryId = typeof CATEGORY_IDS[number]
 

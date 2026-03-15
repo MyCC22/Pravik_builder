@@ -26,30 +26,37 @@ vi.mock('next/server', () => ({
   },
 }))
 
+// Mock generateAfterHoursStreamTwiML (imported by the route)
+vi.mock('@/services/twilio/client', () => ({
+  generateAfterHoursStreamTwiML: vi.fn(() => '<?xml version="1.0" encoding="UTF-8"?><Response><Connect><Stream /></Connect></Response>'),
+}))
+
 import { POST } from '@/app/api/webhooks/twilio/call-forward/route'
 
 /**
- * Create a mock NextRequest whose formData().get('Called') returns the given number.
- * formData.get() must return something with a .toString() method (or null).
+ * Create a mock NextRequest whose formData() returns Called, From, and CallSid fields.
  */
 function createMockRequest(calledNumber?: string) {
   const map = new Map<string, string>()
   if (calledNumber !== undefined) {
     map.set('Called', calledNumber)
   }
+  map.set('From', '+15550001111')
+  map.set('CallSid', 'CA_test_123')
   return {
     formData: vi.fn().mockResolvedValue(map),
   } as any
 }
 
 /**
- * Wire up `mockFrom` so it returns different chains for 'projects' vs 'users'.
+ * Wire up `mockFrom` so it returns different chains for 'projects', 'users', and 'tools'.
  */
 function setupSupabaseMocks(opts: {
-  projectData?: { user_id: string; forwarding_phone: string | null } | null
+  projectData?: { id?: string; user_id: string; forwarding_phone: string | null } | null
   projectError?: boolean
   userData?: { phone_number: string | null } | null
   userError?: boolean
+  toolData?: { id: string; config: any } | null
 }) {
   mockFrom.mockImplementation((table: string) => {
     if (table === 'projects') {
@@ -57,7 +64,7 @@ function setupSupabaseMocks(opts: {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
-              data: opts.projectData ?? null,
+              data: opts.projectData ? { id: opts.projectData.id || 'proj-1', ...opts.projectData } : null,
               error: opts.projectError ? { message: 'not found' } : null,
             }),
           }),
@@ -74,6 +81,20 @@ function setupSupabaseMocks(opts: {
               error: opts.userError ? { message: 'not found' } : null,
             }),
           }),
+        }),
+      }
+    }
+
+    if (table === 'tools') {
+      // Chain: .select().eq().eq().eq().single()
+      const singleFn = vi.fn().mockResolvedValue({
+        data: opts.toolData ?? null,
+        error: opts.toolData ? null : { message: 'not found' },
+      })
+      const eqFn = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ single: singleFn }) }) })
+      return {
+        select: vi.fn().mockReturnValue({
+          eq: eqFn,
         }),
       }
     }

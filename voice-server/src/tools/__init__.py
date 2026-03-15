@@ -11,6 +11,7 @@ from src.tools._base import (
     CallState,
     TurnContext,
     ToolContext,
+    AfterHoursContext,
     ToolDefinition,
     _VALID_STEP_IDS,
     _AUTO_YES_PATTERNS,
@@ -27,12 +28,14 @@ __all__ = [
     "CallState",
     "TurnContext",
     "ToolContext",
+    "AfterHoursContext",
     "ToolDefinition",
     "_VALID_STEP_IDS",
     "_clean_project_name",
     "_is_auto_answerable",
     "get_all_tools",
     "get_tools_for_user",
+    "get_after_hours_tools",
     "get_tool_schemas",
     "build_tool_prompt_instructions",
     "create_tool_handlers",
@@ -72,11 +75,18 @@ def get_all_tools() -> list[ToolDefinition]:
 
 
 def get_tools_for_user(is_returning: bool) -> list[ToolDefinition]:
-    """Return tools available for the given user type."""
+    """Return builder tools available for the given user type."""
     _discover_tools()
+    builder_tools = [t for t in _REGISTRY if t.mode == "builder"]
     if is_returning:
-        return list(_REGISTRY)
-    return [t for t in _REGISTRY if not t.returning_user_only]
+        return builder_tools
+    return [t for t in builder_tools if not t.returning_user_only]
+
+
+def get_after_hours_tools() -> list[ToolDefinition]:
+    """Return tools for the after-hours AI assistant."""
+    _discover_tools()
+    return [t for t in _REGISTRY if t.mode == "after_hours"]
 
 
 def get_tool_schemas(tools: list[ToolDefinition]) -> list[dict]:

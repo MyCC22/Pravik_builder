@@ -75,6 +75,33 @@ export function generateMediaStreamTwiML(params: {
 </Response>`
 }
 
+export function generateAfterHoursStreamTwiML(params: {
+  websocketUrl: string
+  callSid: string
+  callerPhone: string
+  projectId: string
+  businessName: string
+  forwardingPhone: string
+  toolId: string
+  transferEnabled: boolean
+}): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Connect>
+    <Stream url="${escapeXml(params.websocketUrl)}">
+      <Parameter name="mode" value="after_hours" />
+      <Parameter name="callSid" value="${escapeXml(params.callSid)}" />
+      <Parameter name="callerPhone" value="${escapeXml(params.callerPhone)}" />
+      <Parameter name="projectId" value="${escapeXml(params.projectId)}" />
+      <Parameter name="businessName" value="${escapeXml(params.businessName)}" />
+      <Parameter name="forwardingPhone" value="${escapeXml(params.forwardingPhone)}" />
+      <Parameter name="toolId" value="${escapeXml(params.toolId)}" />
+      <Parameter name="transferEnabled" value="${params.transferEnabled ? 'true' : 'false'}" />
+    </Stream>
+  </Connect>
+</Response>`
+}
+
 function escapeXml(str: string): string {
   return str
     .replace(/&/g, '&amp;')

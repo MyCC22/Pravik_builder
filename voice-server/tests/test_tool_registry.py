@@ -34,10 +34,10 @@ def _make_ctx(**overrides) -> ToolContext:
 # ---------------------------------------------------------------------------
 
 
-def test_discovers_all_twelve_tools():
-    """Registry auto-discovers all 12 tool modules."""
+def test_discovers_all_tools():
+    """Registry auto-discovers all tool modules (builder + after-hours)."""
     tools = get_all_tools()
-    assert len(tools) == 12
+    assert len(tools) == 15  # 12 builder + 3 new (ah_save_caller_info, ah_transfer_call, setup_after_hours)
 
 
 def test_no_duplicate_tool_names():
@@ -64,24 +64,29 @@ def test_all_handlers_are_async_callables():
 # ---------------------------------------------------------------------------
 
 
-def test_non_returning_user_excludes_three_tools():
+def test_non_returning_user_excludes_returning_only_tools():
     """New users don't get select_project, create_new_project, list_user_projects."""
     tools = get_tools_for_user(is_returning=False)
     names = {t.name for t in tools}
     assert "select_project" not in names
     assert "create_new_project" not in names
     assert "list_user_projects" not in names
-    assert len(tools) == 9
+    # 13 builder tools - 3 returning-only = 10
+    assert len(tools) == 10
 
 
-def test_returning_user_includes_all_tools():
-    """Returning users get all 12 tools."""
+def test_returning_user_includes_all_builder_tools():
+    """Returning users get all 13 builder tools (excludes after-hours tools)."""
     tools = get_tools_for_user(is_returning=True)
-    assert len(tools) == 12
+    assert len(tools) == 13  # 12 original builder + setup_after_hours
     names = {t.name for t in tools}
     assert "select_project" in names
     assert "create_new_project" in names
     assert "list_user_projects" in names
+    assert "setup_after_hours_ai" in names
+    # After-hours tools should NOT be included in builder tool set
+    assert "save_caller_info" not in names
+    assert "transfer_to_owner" not in names
 
 
 # ---------------------------------------------------------------------------
@@ -92,7 +97,7 @@ def test_returning_user_includes_all_tools():
 def test_schemas_have_openai_format():
     """get_tool_schemas returns dicts with type, name, description, parameters."""
     schemas = get_tool_schemas(get_all_tools())
-    assert len(schemas) == 12
+    assert len(schemas) == 15
     for schema in schemas:
         assert schema["type"] == "function"
         assert isinstance(schema["name"], str)
@@ -131,7 +136,7 @@ def test_create_tool_handlers_returns_wrapped_handlers():
     ctx = _make_ctx()
     tools = get_all_tools()
     handlers = create_tool_handlers(ctx, tools)
-    assert len(handlers) == 12
+    assert len(handlers) == 15
     for name, (handler, timeout) in handlers.items():
         assert callable(handler)
         assert isinstance(timeout, int)

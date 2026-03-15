@@ -7,7 +7,8 @@ import logging
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from src.config import config
-from src.pipeline import create_pipeline
+from src.pipeline import create_pipeline, create_after_hours_pipeline
+from src.services.builder_api import fetch_business_context
 from src.services.call_session import (
     create_call_session,
     end_call_session,
@@ -19,7 +20,7 @@ from src.services.realtime import (
     inject_web_context_into_llm,
     subscribe_to_call_channel,
 )
-from src.tools import CallIdentity, CallState, TurnContext, ToolContext
+from src.tools import CallIdentity, CallState, TurnContext, ToolContext, AfterHoursContext
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -87,6 +88,65 @@ async def media_stream(websocket: WebSocket):
             await websocket.close()
             return
 
+        mode = params.get("mode", "builder")
+
+        # ===================================================================
+        # AFTER-HOURS MODE — simpler pipeline, no browser companion
+        # ===================================================================
+        if mode == "after_hours":
+            caller_phone = params.get("callerPhone", "")
+            project_id = params.get("projectId", "")
+            business_name = params.get("businessName", "")
+            forwarding_phone = params.get("forwardingPhone", "")
+            tool_id = params.get("toolId", "")
+            transfer_enabled = params.get("transferEnabled", "true") == "true"
+            logger.info(
+                f"[{call_sid}] AFTER-HOURS call for '{business_name}' "
+                f"from {caller_phone}, project: {project_id}"
+            )
+
+            # Create call session for tracking
+            session = await create_call_session(
+                call_sid=call_sid,
+                user_id="",  # no user context for after-hours
+                project_id=project_id,
+                phone_number=caller_phone,
+                is_new_user=False,
+            )
+            session_id = session["id"]
+            logger.info(f"[{call_sid}] After-hours session created: {session_id}")
+
+            # Fetch business context from website blocks
+            try:
+                site_context = await fetch_business_context(project_id)
+            except Exception as e:
+                logger.warning(f"[{call_sid}] Failed to fetch business context: {e}")
+                site_context = ""
+
+            # Build after-hours context
+            ah_ctx = AfterHoursContext(
+                call_sid=call_sid,
+                session_id=session_id,
+                caller_phone=caller_phone,
+                project_id=project_id,
+                business_name=business_name,
+                forwarding_phone=forwarding_phone,
+                tool_id=tool_id,
+                transfer_enabled=transfer_enabled,
+                site_context=site_context,
+            )
+
+            # Create and run after-hours pipeline (no Realtime subscription needed)
+            task, runner, llm, recorder = create_after_hours_pipeline(
+                websocket, stream_sid, call_sid, ah_ctx
+            )
+            ah_ctx.llm_ref = llm
+            await runner.run(task)
+            return  # cleanup handled in finally block
+
+        # ===================================================================
+        # BUILDER MODE — full pipeline with browser companion
+        # ===================================================================
         user_id = params.get("userId", "")
         project_id = params.get("projectId", "")
         is_new_user = params.get("isNewUser") == "true"

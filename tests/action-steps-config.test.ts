@@ -22,8 +22,8 @@ describe('ACTION_STEPS', () => {
 })
 
 describe('ACTIONABLE_STEP_IDS', () => {
-  it('excludes coming-soon items', () => {
-    expect(ACTIONABLE_STEP_IDS).not.toContain('ai_phone')
+  it('includes ai_phone (no longer coming soon)', () => {
+    expect(ACTIONABLE_STEP_IDS).toContain('ai_phone')
   })
 
   it('includes all non-coming-soon steps', () => {
@@ -31,23 +31,24 @@ describe('ACTIONABLE_STEP_IDS', () => {
     expect(ACTIONABLE_STEP_IDS).toContain('contact_form')
     expect(ACTIONABLE_STEP_IDS).toContain('phone_number')
     expect(ACTIONABLE_STEP_IDS).toContain('call_forwarding')
+    expect(ACTIONABLE_STEP_IDS).toContain('ai_phone')
   })
 })
 
 describe('getRemainingCount', () => {
   it('returns all when none completed', () => {
-    expect(getRemainingCount(new Set())).toBe(4)
+    expect(getRemainingCount(new Set())).toBe(5)
   })
 
   it('decrements when steps are completed', () => {
-    expect(getRemainingCount(new Set(['build_site']))).toBe(3)
+    expect(getRemainingCount(new Set(['build_site']))).toBe(4)
   })
 
   it('returns zero when all actionable completed', () => {
-    expect(getRemainingCount(new Set(['build_site', 'contact_form', 'phone_number', 'call_forwarding']))).toBe(0)
+    expect(getRemainingCount(new Set(['build_site', 'contact_form', 'phone_number', 'call_forwarding', 'ai_phone']))).toBe(0)
   })
 
-  it('ignores non-actionable step IDs', () => {
+  it('counts ai_phone as actionable', () => {
     expect(getRemainingCount(new Set(['ai_phone']))).toBe(4)
   })
 })

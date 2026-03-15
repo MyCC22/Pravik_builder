@@ -21,7 +21,7 @@ _AUTO_YES_PATTERNS = [
 ]
 
 # Valid step IDs for the action steps menu
-_VALID_STEP_IDS = {"build_site", "contact_form", "phone_number", "call_forwarding"}
+_VALID_STEP_IDS = {"build_site", "contact_form", "phone_number", "call_forwarding", "ai_phone"}
 
 # Prefixes to strip when generating a clean project name from the build description
 _NAME_STRIP_PREFIXES = [
@@ -187,6 +187,34 @@ class ToolContext:
     llm_ref: Any = None
 
 
+# ---------------------------------------------------------------------------
+# After-Hours Context — lighter context for after-hours call handlers
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class AfterHoursContext:
+    """Context for after-hours call handlers.
+
+    Simpler than the builder ToolContext — no project state, no turn context,
+    just the information needed to answer questions and take messages.
+    """
+
+    call_sid: str
+    session_id: str
+    caller_phone: str
+    project_id: str
+    business_name: str
+    forwarding_phone: str
+    tool_id: str  # after_hours_ai tool row ID (for saving submissions)
+    transfer_enabled: bool
+    site_context: str = ""
+    caller_name: str = ""
+    caller_reason: str = ""
+    info_saved: bool = False
+    llm_ref: Any = None
+
+
 @dataclass
 class ToolDefinition:
     """Self-contained tool definition. One file = one tool."""
@@ -198,3 +226,4 @@ class ToolDefinition:
     timeout: int = 60
     prompt_instructions: str = ""
     returning_user_only: bool = False
+    mode: str = "builder"  # "builder" or "after_hours"

@@ -172,6 +172,91 @@ export async function renderAndStoreBlocks(
   return { blocks: insertedBlocks as Block[], theme, config }
 }
 
+/**
+ * Post-generation section validation.
+ *
+ * After the AI picks a template and generates content, this function strips
+ * out sections that are clearly irrelevant to the user's business.
+ *
+ * For example: an "event" template has speakers/schedule which make no sense
+ * for a soccer academy.  A services template might occasionally get pricing
+ * tiers from a landing template leak. This catches those mismatches.
+ *
+ * The templates conditionally render sections based on whether the content
+ * array exists and has items, so removing a field here = no section rendered.
+ */
+function validateSections(
+  config: TemplateConfig,
+  userMessage: string,
+): TemplateConfig {
+  const content = { ...config.content }
+  // Use Record<string, unknown> for dynamic field access during validation
+  const contentRecord = content as Record<string, unknown>
+  const template = config.template as string
+  const msg = userMessage.toLowerCase()
+
+  // ── Template ↔ section allow-lists ──────────────────────────────
+  // Sections only valid for certain template families.
+  // If a section sneaks in via the AI, remove it.
+  const TEMPLATE_ALLOWED_SECTIONS: Record<string, string[]> = {
+    'landing':          ['features', 'testimonials', 'pricing', 'stats'],
+    'landing-bold':     ['features', 'testimonials', 'pricing', 'stats'],
+    'services':         ['services', 'process', 'testimonials', 'faq', 'stats', 'beforeAfter'],
+    'services-bold':    ['services', 'process', 'testimonials', 'faq', 'stats', 'beforeAfter'],
+    'restaurant':       ['menuItems', 'galleryItems', 'testimonials', 'hours', 'address'],
+    'restaurant-dark':  ['menuItems', 'galleryItems', 'testimonials', 'hours', 'address'],
+    'agency':           ['clients', 'features', 'galleryItems', 'process', 'team', 'testimonials'],
+    'agency-editorial': ['clients', 'features', 'galleryItems', 'process', 'team', 'testimonials'],
+    'event':            ['stats', 'speakers', 'schedule', 'pricing', 'faq'],
+    'event-dark':       ['stats', 'speakers', 'schedule', 'pricing', 'faq'],
+  }
+
+  // All optional array-based content fields
+  const ALL_OPTIONAL_SECTIONS = [
+    'features', 'testimonials', 'pricing', 'stats', 'services', 'process',
+    'faq', 'beforeAfter', 'menuItems', 'galleryItems', 'hours', 'clients',
+    'team', 'speakers', 'schedule',
+  ]
+
+  const allowed = TEMPLATE_ALLOWED_SECTIONS[template]
+  if (allowed) {
+    for (const field of ALL_OPTIONAL_SECTIONS) {
+      if (!allowed.includes(field) && contentRecord[field]) {
+        console.log(`[section-validation] Removed "${field}" — not valid for template "${template}"`)
+        delete contentRecord[field]
+      }
+    }
+  }
+
+  // ── Context-based pruning ──────────────────────────────────────
+  // Even within an allowed template, some sections are nonsensical
+  // for certain businesses. Catch the most common embarrassments.
+  const eventWords = ['conference', 'summit', 'gala', 'symposium', 'meetup']
+  const isActualEvent = eventWords.some(w => msg.includes(w))
+
+  // Speakers section only makes sense for actual events
+  if (contentRecord.speakers && !isActualEvent) {
+    console.log(`[section-validation] Removed "speakers" — not a conference/summit/event`)
+    delete contentRecord.speakers
+  }
+
+  // Schedule/agenda only for actual events
+  if (contentRecord.schedule && !isActualEvent) {
+    console.log(`[section-validation] Removed "schedule" — not a conference/summit/event`)
+    delete contentRecord.schedule
+  }
+
+  // Menu items only for food businesses
+  const foodWords = ['restaurant', 'cafe', 'bakery', 'bar', 'food truck', 'diner', 'bistro', 'pizza', 'sushi']
+  const isFoodBusiness = foodWords.some(w => msg.includes(w))
+  if (contentRecord.menuItems && !isFoodBusiness) {
+    console.log(`[section-validation] Removed "menuItems" — not a food business`)
+    delete contentRecord.menuItems
+  }
+
+  return { ...config, content: contentRecord as unknown as TemplateConfig['content'] }
+}
+
 export async function generateSite(
   message: string,
   projectId: string
@@ -195,7 +280,10 @@ export async function generateSite(
     ? (parsed.theme as ThemeId)
     : 'clean'
 
-  const config: TemplateConfig = { ...parsed, template, theme }
+  let config: TemplateConfig = { ...parsed, template, theme }
+
+  // Post-generation: strip sections that don't belong on this template/business
+  config = validateSections(config, message)
 
   return renderAndStoreBlocks(config, projectId)
 }

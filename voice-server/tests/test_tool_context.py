@@ -59,5 +59,6 @@ def test_valid_step_ids_contains_expected():
     assert expected.issubset(_VALID_STEP_IDS)
 
 
-def test_valid_step_ids_excludes_coming_soon():
-    assert "ai_phone" not in _VALID_STEP_IDS
+def test_valid_step_ids_includes_ai_phone():
+    """ai_phone is now a valid step (no longer coming soon)."""
+    assert "ai_phone" in _VALID_STEP_IDS

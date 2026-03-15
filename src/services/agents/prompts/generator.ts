@@ -41,7 +41,15 @@ Universal (required for all templates):
 - "heroTitle": Main hero heading
 - "heroSubtitle": Hero supporting text (1-2 sentences)
 - "heroImageQuery": A 2-4 word Unsplash search term for the hero background photo. MUST include the specific industry/activity — NOT generic business words. Examples: "soccer training field", "italian pasta restaurant", "yoga outdoor class", "dental clinic office", "martial arts dojo", "hair salon styling". BAD examples: "coaching mentoring growth", "professional business team", "success leadership". The image should visually represent what the business DOES.
-- "businessCategory": One of these 40 categories that best matches the business: "yoga", "fitness", "spa", "salon", "restaurant", "cafe", "bakery", "bar", "dental", "medical", "veterinary", "real-estate", "law", "accounting", "insurance", "plumbing", "electrician", "landscaping", "auto-repair", "construction", "cleaning", "moving", "photography", "videography", "music", "dance", "art", "education", "martial-arts", "tech", "marketing", "web-design", "consulting", "coaching", "wedding", "event", "catering", "florist", "fashion", "interior-design". Pick the closest match.
+- "businessCategory": One of these categories that best matches the business: "yoga", "fitness", "spa", "salon", "restaurant", "cafe", "bakery", "bar", "dental", "medical", "veterinary", "real-estate", "law", "accounting", "insurance", "plumbing", "electrician", "landscaping", "auto-repair", "hvac", "garage-door", "med-spa", "construction", "cleaning", "moving", "photography", "videography", "music", "dance", "art", "education", "martial-arts", "tech", "marketing", "web-design", "consulting", "coaching", "wedding", "event", "catering", "florist", "fashion", "interior-design", "kids-bootcamp", "kids-coding", "tutoring". Pick the closest match. IMPORTANT category rules:
+  * Sports businesses (soccer, basketball, swim, tennis) → "kids-bootcamp" for youth programs or "fitness" for adult training — NOT "coaching"
+  * HVAC / heating / cooling / air conditioning → "hvac"
+  * Garage door repair / installation → "garage-door"
+  * Med spa / aesthetics / botox / skin treatments → "med-spa"
+  * Immigration lawyer / family lawyer → "law"
+  * Gardener / lawn care → "landscaping"
+  * Urgent care / walk-in clinic → "medical"
+  * House cleaning / maid service → "cleaning"
 - "ctaText": Primary call-to-action button text (e.g., "Get Started", "Book Now")
 - "ctaUrl": CTA link (default: "#contact")
 - "footerLinks": [{"label": "Section", "href": "#section"}] — 3-5 nav links
@@ -111,12 +119,12 @@ ${CONTENT_SCHEMA}
 
 Template selection rules:
 1. Food/restaurant/cafe/bakery business → "restaurant" or "restaurant-dark"
-2. Event/conference/workshop/course → "event" or "event-dark"
+2. ONE-TIME event/conference/summit/gala/meetup → "event" or "event-dark". ONLY use for actual scheduled events with speakers and an agenda. Do NOT use for ongoing businesses like academies, coaching programs, training centers, camps, or classes — those are SERVICES.
 3. Creative studio/agency/freelancer/portfolio → "agency" or "agency-editorial"
-4. Service provider (coach, plumber, tutor, contractor, consultant) → "services" or "services-bold"
+4. Service provider (coach, plumber, tutor, contractor, consultant, trainer, academy, camp, studio, gym, sports program) → "services" or "services-bold". This includes ALL ongoing businesses that provide training, coaching, lessons, or programs.
 5. SaaS/app/product launch/general → "landing" or "landing-bold"
 6. Use "-bold"/"-dark"/"-editorial" variants when user wants dramatic, modern, or dark style
-7. Default: "landing" with "clean" theme
+7. Default: "services" with "clean" theme
 
 Theme selection rules:
 1. Dark/modern/tech → "bold"
@@ -127,7 +135,15 @@ Theme selection rules:
 Rules:
 - Return ONLY valid JSON, no markdown fences, no explanation
 - Generate realistic, professional content. Content should sound like real marketing copy.
-- Include all content fields relevant to the chosen template
+- ONLY include content fields that belong to the chosen template type. Do NOT mix sections across template types:
+  * NEVER put "speakers" or "schedule" on a services/landing/agency template
+  * NEVER put "menuItems" on a non-restaurant template
+  * NEVER put "team" or "clients" on a services/landing template
+  * services templates get: services, process, stats, testimonials, faq
+  * landing templates get: features, stats, testimonials, pricing
+  * event templates get: stats, speakers, schedule, pricing, faq
+  * restaurant templates get: menuItems, galleryItems, testimonials, hours, address
+  * agency templates get: clients, features, galleryItems, process, team, testimonials
 - Template IDs: ${JSON.stringify(TEMPLATE_IDS)}
 - Theme IDs: ${JSON.stringify(THEME_IDS)}
 - IMPORTANT: For ALL CTA buttons, booking buttons, and call-to-action links, use "${bookingUrl}" as the URL. Set "ctaUrl" to "${bookingUrl}" and "bookingUrl" to "${bookingUrl}". This links them to the booking/lead capture form.

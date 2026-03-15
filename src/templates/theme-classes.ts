@@ -14,6 +14,12 @@ export interface ThemeClasses {
   borderColor: string
   navBg: string
   sectionAlt: string
+  /** Modern gradient used as hero background when no image is available */
+  heroGradient: string
+  /** Text color for content rendered on top of the heroGradient */
+  heroGradientText: string
+  /** Muted text color for content rendered on top of the heroGradient */
+  heroGradientTextMuted: string
 }
 
 const themeClassMap: Record<ThemeId, ThemeClasses> = {
@@ -31,6 +37,9 @@ const themeClassMap: Record<ThemeId, ThemeClasses> = {
     borderColor: 'border-slate-200',
     navBg: 'bg-white/80 backdrop-blur-xl',
     sectionAlt: 'bg-slate-50',
+    heroGradient: 'bg-gradient-to-br from-slate-800 via-blue-900 to-slate-900',
+    heroGradientText: 'text-white',
+    heroGradientTextMuted: 'text-white/70',
   },
   bold: {
     bg: 'bg-zinc-950',
@@ -46,6 +55,9 @@ const themeClassMap: Record<ThemeId, ThemeClasses> = {
     borderColor: 'border-zinc-800',
     navBg: 'bg-zinc-950/80 backdrop-blur-xl',
     sectionAlt: 'bg-zinc-900',
+    heroGradient: 'bg-gradient-to-br from-zinc-900 via-indigo-950 to-zinc-950',
+    heroGradientText: 'text-white',
+    heroGradientTextMuted: 'text-white/70',
   },
   vibrant: {
     bg: 'bg-gradient-to-br from-blue-50 via-purple-50 to-emerald-50',
@@ -61,6 +73,9 @@ const themeClassMap: Record<ThemeId, ThemeClasses> = {
     borderColor: 'border-slate-200/60',
     navBg: 'bg-white/60 backdrop-blur-xl',
     sectionAlt: 'bg-white/40',
+    heroGradient: 'bg-gradient-to-br from-violet-600 via-blue-600 to-emerald-500',
+    heroGradientText: 'text-white',
+    heroGradientTextMuted: 'text-white/80',
   },
   warm: {
     bg: 'bg-stone-50',
@@ -76,6 +91,9 @@ const themeClassMap: Record<ThemeId, ThemeClasses> = {
     borderColor: 'border-stone-200',
     navBg: 'bg-stone-50/80 backdrop-blur-xl',
     sectionAlt: 'bg-stone-100/50',
+    heroGradient: 'bg-gradient-to-br from-amber-800 via-orange-900 to-stone-900',
+    heroGradientText: 'text-white',
+    heroGradientTextMuted: 'text-white/80',
   },
 }
 

@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import re
 from typing import Any
 
 import httpx
@@ -89,3 +90,45 @@ async def fetch_site_state(project_id: str) -> dict[str, Any]:
         "blocks": blocks_resp.data or [],
         "tools": tools_resp.data or [],
     }
+
+
+async def fetch_business_context(project_id: str) -> str:
+    """Extract text content from website blocks for after-hours AI context.
+
+    Strips HTML tags from each block's content and returns a concatenated
+    summary. Focuses on text-heavy blocks that contain useful business info
+    (hero, about, services, contact, FAQ, etc.).
+
+    Returns a string suitable for injection into the after-hours AI system prompt.
+    """
+    supabase = await get_supabase_client()
+
+    blocks_resp = await (
+        supabase.table("blocks")
+        .select("block_type, html")
+        .eq("project_id", project_id)
+        .order("position")
+        .execute()
+    )
+    blocks = blocks_resp.data or []
+
+    context_parts = []
+    for block in blocks:
+        html = block.get("html", "")
+        if not html:
+            continue
+
+        # Strip HTML tags and normalize whitespace
+        text = re.sub(r"<[^>]+>", " ", html)
+        text = re.sub(r"\s+", " ", text).strip()
+
+        # Skip blocks with very little text content (likely just layout/images)
+        if len(text) < 20:
+            continue
+
+        # Truncate long blocks to keep the prompt manageable
+        block_type = block.get("block_type", "unknown")
+        truncated = text[:500] + "..." if len(text) > 500 else text
+        context_parts.append(f"[{block_type}]: {truncated}")
+
+    return "\n".join(context_parts) if context_parts else "No business information available."
