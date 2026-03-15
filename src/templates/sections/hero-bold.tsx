@@ -1,7 +1,7 @@
 import type { ThemeClasses } from '../theme-classes'
 import { escapeHtml } from '../utils'
 
-export function renderHeroBold(title: string, subtitle: string, t: ThemeClasses, ctaText?: string, ctaUrl = '#contact', heroImageUrl?: string, tagline?: string): string {
+export function renderHeroBold(title: string, subtitle: string, t: ThemeClasses, ctaText?: string, ctaUrl = '#contact', heroImageUrl?: string, tagline?: string, heroFormHtml?: string): string {
   const hasImage = !!heroImageUrl
 
   const taglineHtml = tagline
@@ -9,7 +9,7 @@ export function renderHeroBold(title: string, subtitle: string, t: ThemeClasses,
     : ''
 
   // Both image and gradient heroes use light-on-dark styling
-  const ctaHtml = ctaText
+  const ctaHtml = ctaText && !heroFormHtml
     ? `<div class="mt-10 flex items-center justify-center gap-x-6">
         <a href="${escapeHtml(ctaUrl)}" class="bg-white text-slate-900 hover:bg-slate-100 px-8 py-4 text-base font-semibold rounded-full shadow-lg transition-all duration-200">${escapeHtml(ctaText)}</a>
       </div>`
@@ -28,6 +28,7 @@ export function renderHeroBold(title: string, subtitle: string, t: ThemeClasses,
     <p class="mt-8 text-xl leading-8 text-white/80 max-w-2xl mx-auto">${escapeHtml(subtitle)}</p>
     ${ctaHtml}
   </div>
+  ${heroFormHtml || ''}
 </section>`
   }
 
@@ -44,5 +45,6 @@ export function renderHeroBold(title: string, subtitle: string, t: ThemeClasses,
     <p class="mt-8 text-xl leading-8 ${t.heroGradientTextMuted} max-w-2xl mx-auto">${escapeHtml(subtitle)}</p>
     ${ctaHtml}
   </div>
+  ${heroFormHtml || ''}
 </section>`
 }
