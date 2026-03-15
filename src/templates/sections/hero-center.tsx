@@ -5,7 +5,7 @@ export function renderHeroCenter(title: string, subtitle: string, t: ThemeClasse
   const hasImage = !!heroImageUrl
 
   const taglineHtml = tagline
-    ? `<span class="inline-block ${t.taglineBg} px-4 py-1.5 rounded-full text-sm font-semibold mb-6">${escapeHtml(tagline)}</span>`
+    ? `<span class="inline-block ${t.taglineBg} px-3 py-1 rounded-full text-xs font-semibold mb-6">${escapeHtml(tagline)}</span>`
     : ''
 
   // Both image and gradient heroes use light-on-dark styling

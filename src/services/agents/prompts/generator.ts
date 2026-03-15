@@ -37,7 +37,7 @@ Content fields (include ALL that apply to the chosen template):
 
 Universal (required for all templates):
 - "siteName": Business/brand name
-- "tagline": Short tagline (used in CTA sections)
+- "tagline": Very short tagline, 3-5 words MAX (shown as a small pill badge above the hero title). Examples: "Excellence in Motion", "Built for Speed", "Your Dream Kitchen", "Dance with Joy". NEVER exceed 5 words.
 - "heroTitle": Main hero heading
 - "heroSubtitle": Hero supporting text (1-2 sentences)
 - "heroImageQuery": A 2-4 word Unsplash search term for the hero background photo. MUST include the specific industry/activity — NOT generic business words. Examples: "soccer training field", "italian pasta restaurant", "yoga outdoor class", "dental clinic office", "martial arts dojo", "hair salon styling". BAD examples: "coaching mentoring growth", "professional business team", "success leadership". The image should visually represent what the business DOES.

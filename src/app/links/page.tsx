@@ -10,6 +10,13 @@ interface ProjectWithBlocks {
   source: string | null
   created_at: string
   updated_at: string
+  template_config?: {
+    theme?: string
+    content?: {
+      siteName?: string
+      businessCategory?: string
+    }
+  } | null
 }
 
 export default async function LinksPage() {
@@ -66,7 +73,7 @@ export default async function LinksPage() {
   // to decide between dashboard vs direct redirect
   const { data: allProjects } = await supabase
     .from('projects')
-    .select('id, name, source, created_at, updated_at')
+    .select('id, name, source, created_at, updated_at, template_config')
     .eq('user_id', userId)
     .order('updated_at', { ascending: false })
 

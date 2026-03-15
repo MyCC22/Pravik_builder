@@ -12,6 +12,13 @@ interface DashboardProject {
   source: string | null
   created_at: string
   updated_at: string
+  template_config?: {
+    theme?: string
+    content?: {
+      siteName?: string
+      businessCategory?: string
+    }
+  } | null
 }
 
 interface VoiceDashboardProps {

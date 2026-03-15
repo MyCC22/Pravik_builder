@@ -5,7 +5,7 @@ export function renderHeroBold(title: string, subtitle: string, t: ThemeClasses,
   const hasImage = !!heroImageUrl
 
   const taglineHtml = tagline
-    ? `<span class="inline-block bg-white/15 backdrop-blur-sm text-white px-4 py-1.5 rounded-full text-sm font-semibold mb-6">${escapeHtml(tagline)}</span>`
+    ? `<span class="inline-block bg-white/15 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-semibold mb-6">${escapeHtml(tagline)}</span>`
     : ''
 
   // Both image and gradient heroes use light-on-dark styling
@@ -34,7 +34,7 @@ export function renderHeroBold(title: string, subtitle: string, t: ThemeClasses,
 
   // No image available — use a modern gradient background with decorative orbs
   const gradientTaglineHtml = tagline
-    ? `<span class="inline-block ${t.taglineBg} px-4 py-1.5 rounded-full text-sm font-semibold mb-6">${escapeHtml(tagline)}</span>`
+    ? `<span class="inline-block ${t.taglineBg} px-3 py-1 rounded-full text-xs font-semibold mb-6">${escapeHtml(tagline)}</span>`
     : ''
 
   return `<section class="relative py-36 sm:py-48 overflow-hidden ${t.heroGradient}">
