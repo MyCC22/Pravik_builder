@@ -10,12 +10,13 @@ The current image system uses 39 broad stock categories to select hero images. W
 
 ## Solution
 
-Switch hero image selection to a **Pexels API-first** strategy. Use the AI's `heroImageQuery` to search the Pexels photo API for a relevant hero image. Fall back to the existing stock image system only if the API call fails.
+Switch hero image selection to a **Pexels API-first** strategy. Use the AI's `heroImageQuery` to search the Pexels photo API for a relevant hero image. Fall back to the existing stock/Unsplash system only if the API call fails.
 
 **Priority order (hero only):**
-1. Pexels API search using `heroImageQuery` → use `src.large` (940×650)
-2. Stock image category (existing behavior) → fallback
-3. Gradient placeholder → final fallback
+1. Pexels API search using `heroImageQuery` → use `src.large` (max width 940px, height varies by aspect ratio)
+2. Stock image category → existing fallback
+3. Unsplash API → existing fallback
+4. Gradient placeholder → final fallback
 
 Gallery images remain unchanged (stock-first, as today).
 
@@ -27,7 +28,7 @@ Thin wrapper around the Pexels search endpoint.
 
 ```
 Endpoint:  GET https://api.pexels.com/v1/search
-Auth:      Authorization: {PEXELS_API_KEY}
+Auth:      Authorization header with bare API key (no prefix, unlike Unsplash's "Client-ID")
 Params:    query, orientation=landscape, per_page=1
 Timeout:   5 seconds (matches existing Unsplash timeout)
 Returns:   string (image URL) | null
@@ -40,20 +41,26 @@ Returns:   string (image URL) | null
 - 5-second AbortController timeout (same pattern as Unsplash client)
 - Missing `PEXELS_API_KEY` env var → return `null` immediately (no crash)
 - API errors (429 rate limit, 5xx) → return `null`
-- Empty results → return `null`
-- All failures are non-fatal; function never throws
+- Empty results or missing `src.large` URL → return `null`
+- All failures logged via `console.warn` (matching Unsplash client pattern) but never throw
 
 ### Modified File: `src/services/unsplash/image-fetcher.ts`
 
-Only `fetchTemplateImages()` changes. Before the existing stock/Unsplash logic for hero images, attempt a Pexels API call:
+Only `fetchTemplateImages()` changes. The Pexels call is inserted **at the very top** of the function, **before** the `hasStockImages()` branch, so it runs in all environments (dev and production).
 
 ```
-1. Extract heroQuery from config.content.heroImageQuery || config.content.siteName
+1. Extract heroQuery from config.content.heroImageQuery || config.content.siteName || 'business'
 2. Call searchPexelsHeroImage(heroQuery)
-3. If result is non-null → set heroImageUrl = result, skip stock/Unsplash for hero
-4. If null → fall through to existing stock → Unsplash → gradient chain
-5. Gallery image logic is completely untouched
+3. If Pexels returns a URL:
+   - Set pexelsHeroUrl = result
+   - Still run the existing stock/Unsplash path for gallery images
+   - Override only the heroImageUrl in the returned TemplateImages with pexelsHeroUrl
+4. If Pexels returns null:
+   - Fall through to existing stock → Unsplash → gradient chain (unchanged behavior)
+   - Both hero AND gallery come from the existing path as before
 ```
+
+Key detail: even when Pexels succeeds for hero, the existing `fetchFromStockImages()` or `fetchFromUnsplashApi()` still runs to provide gallery images. We just override `heroImageUrl` in the result.
 
 ### Environment Variable
 
@@ -63,14 +70,18 @@ Only `fetchTemplateImages()` changes. Before the existing stock/Unsplash logic f
 
 ## Image Size Choice
 
-Using `src.large` (940×650) from Pexels responses. Rationale:
+Using `src.large` from Pexels responses. Max width is 940px; height varies based on original photo's aspect ratio (not a fixed 650px). With `orientation=landscape`, photos will be wider than tall.
 
-| Size | Dimensions | Decision |
-|------|-----------|----------|
+| Size | Max Dimensions | Decision |
+|------|---------------|----------|
 | `original` | Varies, potentially huge | Too heavy |
-| `large2x` | 1880×1300 | Full HD, unnecessarily large |
-| `large` | 940×650 | **Selected** — good balance of quality/size for hero banners |
-| `medium` | 350px height | Too small for full-width hero backgrounds |
+| `large2x` | 1880px wide | Full HD, unnecessarily large |
+| `large` | 940px wide | **Selected** — good balance of quality/size for hero banners |
+| `medium` | 350px tall | Too small for full-width hero backgrounds |
+
+## Pexels License & Attribution
+
+Pexels photos are free to use with no attribution required (unlike Unsplash). Their license allows use for any purpose including commercial. No photographer credit needs to be stored or displayed.
 
 ## Files Changed
 
@@ -93,5 +104,7 @@ Using `src.large` (940×650) from Pexels responses. Rationale:
 
 1. Generate a "Bollywood dance class" site → hero should show Bollywood dance, not ballet
 2. Generate a "soccer academy" site → hero should show soccer, not generic sports
-3. Disconnect API key → should gracefully fall back to stock images
-4. Verify gallery images are still stock-based (unchanged)
+3. Remove `PEXELS_API_KEY` env var → should gracefully fall back to stock images (no crash)
+4. Verify gallery images are still stock-based (unchanged) even when Pexels hero succeeds
+5. Empty/undefined `heroImageQuery` → should fall back to `siteName` then `'business'`
+6. Pexels returns result but `src.large` is missing → should return null, fall back to stock
