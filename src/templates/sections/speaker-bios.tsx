@@ -3,10 +3,10 @@ import type { ThemeClasses } from '../theme-classes'
 import { escapeHtml } from '../utils'
 
 export function renderSpeakerBios(speakers: Speaker[], t: ThemeClasses): string {
-  const cards = speakers.map((s, i) => {
-    const hue = (i * 53 + 220) % 360
-    return `<div class="${t.surface} ${t.border} rounded-2xl p-8 text-center">
-      <div class="w-20 h-20 mx-auto rounded-full mb-4" style="background:linear-gradient(135deg, hsl(${hue},35%,80%), hsl(${(hue+30)%360},45%,70%))"></div>
+  const cards = speakers.map(s => {
+    const initial = s.name ? s.name.charAt(0).toUpperCase() : '?'
+    return `<div class="animate-on-scroll ${t.surface} ${t.border} rounded-3xl p-10 text-center ${t.cardShadow}">
+      <div class="w-20 h-20 mx-auto rounded-full mb-5 ${t.accentBg} ${t.accentText} flex items-center justify-center text-2xl font-bold">${initial}</div>
       <h3 class="text-base font-semibold ${t.text}">${escapeHtml(s.name)}</h3>
       <p class="text-sm ${t.accent} font-medium mt-1">${escapeHtml(s.topic)}</p>
       <p class="mt-3 text-sm ${t.textMuted}">${escapeHtml(s.bio)}</p>

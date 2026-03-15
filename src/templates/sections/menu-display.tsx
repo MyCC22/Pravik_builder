@@ -14,8 +14,8 @@ export function renderMenuDisplay(categories: MenuCategory[], t: ThemeClasses): 
       </div>`
     ).join('')
 
-    return `<div class="mb-12 last:mb-0">
-      <h3 class="text-xl font-bold ${t.text} mb-6 pb-2 border-b-2 ${t.borderColor}">${escapeHtml(cat.category)}</h3>
+    return `<div class="animate-on-scroll ${t.surface} ${t.border} rounded-3xl p-10 mb-8 last:mb-0 ${t.cardShadow}">
+      <h3 class="text-xl font-bold ${t.text} mb-6">${escapeHtml(cat.category)}</h3>
       ${items}
     </div>`
   }).join('')

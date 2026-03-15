@@ -1,21 +1,22 @@
 import type { Testimonial } from '../types'
 import type { ThemeClasses } from '../theme-classes'
-import { escapeHtml } from '../utils'
+import { escapeHtml, getStarRating } from '../utils'
 
 export function renderTestimonials(testimonials: Testimonial[], t: ThemeClasses): string {
-  const cards = testimonials.map(tm =>
-    `<div class="${t.surface} ${t.border} rounded-2xl p-8">
-      <div class="${t.accent} text-3xl mb-4">&ldquo;</div>
-      <p class="text-base leading-7 ${t.text}">${escapeHtml(tm.quote)}</p>
-      <div class="mt-6 flex items-center gap-4">
-        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex-shrink-0"></div>
+  const cards = testimonials.map(tm => {
+    const initial = tm.name ? tm.name.charAt(0).toUpperCase() : '?'
+    return `<div class="animate-on-scroll ${t.surface} ${t.border} rounded-3xl p-10 transition-all duration-300 ${t.cardShadow}">
+      ${getStarRating()}
+      <p class="mt-5 text-base leading-7 ${t.text}">${escapeHtml(tm.quote)}</p>
+      <div class="mt-8 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full ${t.accentBg} ${t.accentText} flex items-center justify-center font-bold text-lg flex-shrink-0">${initial}</div>
         <div>
           <p class="text-sm font-semibold ${t.text}">${escapeHtml(tm.name)}</p>
           <p class="text-sm ${t.textMuted}">${escapeHtml(tm.role)}</p>
         </div>
       </div>
     </div>`
-  ).join('')
+  }).join('')
 
   return `<section id="testimonials" class="py-24 sm:py-32 ${t.sectionAlt}">
   <div class="max-w-7xl mx-auto px-6 lg:px-8">

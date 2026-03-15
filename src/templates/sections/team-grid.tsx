@@ -3,10 +3,10 @@ import type { ThemeClasses } from '../theme-classes'
 import { escapeHtml } from '../utils'
 
 export function renderTeamGrid(team: TeamMember[], t: ThemeClasses): string {
-  const cards = team.map((m, i) => {
-    const hue = (i * 67 + 180) % 360
-    return `<div class="text-center">
-      <div class="w-24 h-24 mx-auto rounded-full mb-4 ${t.border}" style="background:linear-gradient(135deg, hsl(${hue},35%,80%), hsl(${(hue+30)%360},45%,70%))"></div>
+  const cards = team.map(m => {
+    const initial = m.name ? m.name.charAt(0).toUpperCase() : '?'
+    return `<div class="animate-on-scroll text-center">
+      <div class="w-24 h-24 mx-auto rounded-full mb-5 ${t.accentBg} ${t.accentText} flex items-center justify-center text-3xl font-bold">${initial}</div>
       <h3 class="text-base font-semibold ${t.text}">${escapeHtml(m.name)}</h3>
       <p class="text-sm ${t.accent} font-medium">${escapeHtml(m.role)}</p>
       <p class="mt-2 text-sm ${t.textMuted}">${escapeHtml(m.bio)}</p>

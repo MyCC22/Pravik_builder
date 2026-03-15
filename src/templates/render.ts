@@ -12,7 +12,8 @@ import { renderAgencyEditorial } from './agency-editorial'
 import { renderEvent } from './event'
 import { renderEventDark } from './event-dark'
 
-export { escapeHtml } from './utils'
+import { escapeHtml } from './utils'
+export { escapeHtml }
 
 const templateMap: Record<TemplateId, (config: TemplateConfig) => string> = {
   'landing': renderLanding,
@@ -46,7 +47,7 @@ export function renderTailwindShell(title: string, bgClass: string, bodyHtml: st
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
+  <title>${escapeHtml(title)}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -55,10 +56,27 @@ export function renderTailwindShell(title: string, bgClass: string, bodyHtml: st
     *, *::before, *::after { box-sizing: border-box; }
     body { font-family: 'Inter', system-ui, sans-serif; }
     html { scroll-behavior: smooth; }
+    .animate-on-scroll {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    }
+    .animate-on-scroll.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
   </style>
 </head>
 <body class="${bgClass} antialiased">
 ${bodyHtml}
+<script>
+(function(){
+  var o = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); o.unobserve(e.target); }});
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.animate-on-scroll').forEach(function(el){ o.observe(el); });
+})();
+</script>
 </body>
 </html>`
 }

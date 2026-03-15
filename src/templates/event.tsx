@@ -21,8 +21,8 @@ export function renderEvent(config: TemplateConfig): string {
   ]
 
   const sections: string[] = [
-    renderNavbar(content.siteName, links, t),
-    renderHeroCenter(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl, content.heroImageUrl),
+    renderNavbar(content.siteName, links, t, content.ctaText, content.ctaUrl),
+    renderHeroCenter(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl, content.heroImageUrl, content.tagline),
   ]
 
   if (content.stats?.length) sections.push(renderStatsCounter(content.stats, t))

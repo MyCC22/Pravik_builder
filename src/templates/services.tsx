@@ -22,18 +22,20 @@ export function renderServices(config: TemplateConfig): string {
   ]
 
   const sections: string[] = [
-    renderNavbar(content.siteName, links, t),
-    renderHeroCenter(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl, content.heroImageUrl),
+    renderNavbar(content.siteName, links, t, content.ctaText, content.ctaUrl),
+    renderHeroCenter(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl, content.heroImageUrl, content.tagline),
   ]
 
-  if (content.services?.length) sections.push(renderServiceCards(content.services, t))
+  if (content.services?.length) sections.push(renderServiceCards(content.services, t, content.servicesHeading, content.servicesSubheading))
   if (content.process?.length) sections.push(renderProcessSteps(content.process, t))
   if (content.stats?.length) sections.push(renderStatsCounter(content.stats, t))
   if (content.testimonials?.length) sections.push(renderTestimonials(content.testimonials, t))
   if (content.faq?.length) sections.push(renderFAQ(content.faq, t))
 
-  sections.push(renderBookingCTA(t, content.bookingText, content.bookingUrl))
-  sections.push(renderContactSection(t, content.contactEmail, content.contactPhone, content.address))
+  sections.push(renderBookingCTA(t, content.bookingText, content.bookingUrl, content.bookingHeading, content.bookingSubheading))
+  if (content.contactEmail || content.contactPhone || content.address) {
+    sections.push(renderContactSection(t, content.contactEmail, content.contactPhone, content.address, content.contactHeading, content.contactSubheading))
+  }
   sections.push(renderFooter(content.siteName, links, t))
 
   return sections.join('\n')

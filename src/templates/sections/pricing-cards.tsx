@@ -21,14 +21,14 @@ export function renderPricingCards(plans: PricingPlan[], t: ThemeClasses): strin
       </li>`
     ).join('')
 
-    return `<div class="${cardBg} rounded-2xl p-8 ${highlighted ? 'shadow-xl scale-105 relative z-10' : 'shadow-sm'}">
-      ${highlighted ? '<div class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-white text-slate-900 text-xs font-bold rounded-full shadow">Most Popular</div>' : ''}
+    return `<div class="animate-on-scroll ${cardBg} rounded-3xl p-10 ${highlighted ? 'shadow-2xl scale-105 relative z-10' : t.cardShadow}">
+      ${highlighted ? '<div class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-white text-slate-900 text-xs font-bold rounded-full shadow-lg">Most Popular</div>' : ''}
       <h3 class="text-lg font-semibold ${titleColor}">${escapeHtml(p.plan)}</h3>
       <p class="mt-4 flex items-baseline gap-1">
-        <span class="text-4xl font-extrabold tracking-tight ${priceColor}">${escapeHtml(p.price)}</span>
+        <span class="text-5xl font-extrabold tracking-tight ${priceColor}">${escapeHtml(p.price)}</span>
       </p>
-      <ul class="mt-8 space-y-3">${featuresHtml}</ul>
-      <a href="#contact" class="mt-8 block text-center ${btnClass} px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-200">Get started</a>
+      <ul class="mt-8 space-y-4">${featuresHtml}</ul>
+      <a href="#contact" class="mt-8 block text-center ${btnClass} px-6 py-3.5 text-sm font-semibold rounded-full transition-all duration-200">Get started</a>
     </div>`
   }).join('')
 

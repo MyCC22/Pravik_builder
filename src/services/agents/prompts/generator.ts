@@ -54,13 +54,24 @@ Universal (required for all templates):
 - "ctaUrl": CTA link (default: "#contact")
 - "footerLinks": [{"label": "Section", "href": "#section"}] — 3-5 nav links
 
+Section headings (optional — customize section titles to match the business):
+- "servicesHeading": Custom heading for the services section (default: "What we offer")
+- "servicesSubheading": Subtitle for services section (default: "Professional services tailored to your needs.")
+- "featuresHeading": Custom heading for features section (default: "Everything you need")
+- "featuresSubheading": Subtitle for features section
+- "contactHeading": Custom heading for contact section (default: "Get in touch")
+- "contactSubheading": Subtitle for contact section
+- "bookingHeading": Custom heading for booking CTA (default: "Ready to get started?")
+- "bookingSubheading": Subtitle for booking CTA
+Generate business-specific headings (e.g., "Our Expertise" for a law firm, "Our Menu" for a restaurant, "What We Do" for an agency). Do NOT use the generic defaults — always customize these to match the business.
+
 Landing templates:
-- "features": [{"icon": "emoji", "title": "string", "description": "string"}] — 3-6 feature cards
+- "features": [{"icon": "icon-name", "title": "string", "description": "string"}] — 3-6 feature cards. Icon must be one of: wrench, shield, clock, star, phone, home, zap, check-circle, users, chart, settings, heart, sparkles, trophy, target, thumb-up
 - "testimonials": [{"quote": "string", "name": "string", "role": "string"}] — 2-3 testimonials
 - "pricing": [{"plan": "string", "price": "$X/mo", "features": ["string"], "highlighted": boolean}] — 2-3 pricing plans, mark one as highlighted
 
 Services templates:
-- "services": [{"icon": "emoji", "title": "string", "description": "string"}] — 3-6 service offerings
+- "services": [{"icon": "icon-name", "title": "string", "description": "string"}] — 3-6 service offerings. Icon must be one of: wrench, shield, clock, star, phone, home, zap, check-circle, users, chart, settings, heart, sparkles, trophy, target, thumb-up
 - "process": [{"step": "1", "title": "string", "description": "string"}] — 3-5 process steps
 - "testimonials": same as above
 - "faq": [{"question": "string", "answer": "string"}] — 4-6 FAQ items

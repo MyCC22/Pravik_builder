@@ -8,7 +8,7 @@ export function renderGalleryGrid(items: GalleryItem[], t: ThemeClasses): string
     const bgStyle = item.imageUrl
       ? `background-image:url('${item.imageUrl}');background-size:cover;background-position:center`
       : `background:linear-gradient(135deg, hsl(${hue},40%,85%), hsl(${(hue+40)%360},50%,75%))`
-    return `<div class="group relative overflow-hidden rounded-2xl ${t.border}">
+    return `<div class="animate-on-scroll group relative overflow-hidden rounded-3xl ${t.border} ${t.cardShadow}">
       <div class="aspect-[4/3]" style="${bgStyle}"></div>
       <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
       <div class="absolute bottom-0 left-0 right-0 p-6 translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300">

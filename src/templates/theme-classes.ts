@@ -20,6 +20,20 @@ export interface ThemeClasses {
   heroGradientText: string
   /** Muted text color for content rendered on top of the heroGradient */
   heroGradientTextMuted: string
+  /** Light-tinted accent bg for icon circles */
+  accentBgLight: string
+  /** Tagline pill badge classes (bg + text color) */
+  taglineBg: string
+  /** Elevated card shadow classes */
+  cardShadow: string
+  /** Divider accent for stat items */
+  statDivider: string
+  /** Footer background */
+  footerBg: string
+  /** Footer text color */
+  footerText: string
+  /** Footer muted text */
+  footerTextMuted: string
 }
 
 const themeClassMap: Record<ThemeId, ThemeClasses> = {
@@ -40,6 +54,13 @@ const themeClassMap: Record<ThemeId, ThemeClasses> = {
     heroGradient: 'bg-gradient-to-br from-slate-800 via-blue-900 to-slate-900',
     heroGradientText: 'text-white',
     heroGradientTextMuted: 'text-white/70',
+    accentBgLight: 'bg-blue-50',
+    taglineBg: 'bg-blue-50 text-blue-700',
+    cardShadow: 'shadow-sm hover:shadow-xl',
+    statDivider: 'border-blue-600',
+    footerBg: 'bg-slate-900',
+    footerText: 'text-slate-300',
+    footerTextMuted: 'text-slate-500',
   },
   bold: {
     bg: 'bg-zinc-950',
@@ -58,6 +79,13 @@ const themeClassMap: Record<ThemeId, ThemeClasses> = {
     heroGradient: 'bg-gradient-to-br from-zinc-900 via-indigo-950 to-zinc-950',
     heroGradientText: 'text-white',
     heroGradientTextMuted: 'text-white/70',
+    accentBgLight: 'bg-indigo-950',
+    taglineBg: 'bg-indigo-900 text-indigo-300',
+    cardShadow: 'shadow-none hover:shadow-lg hover:shadow-indigo-500/10',
+    statDivider: 'border-indigo-500',
+    footerBg: 'bg-zinc-900',
+    footerText: 'text-zinc-400',
+    footerTextMuted: 'text-zinc-600',
   },
   vibrant: {
     bg: 'bg-gradient-to-br from-blue-50 via-purple-50 to-emerald-50',
@@ -76,6 +104,13 @@ const themeClassMap: Record<ThemeId, ThemeClasses> = {
     heroGradient: 'bg-gradient-to-br from-violet-600 via-blue-600 to-emerald-500',
     heroGradientText: 'text-white',
     heroGradientTextMuted: 'text-white/80',
+    accentBgLight: 'bg-blue-50',
+    taglineBg: 'bg-blue-100 text-blue-700',
+    cardShadow: 'shadow-sm hover:shadow-xl',
+    statDivider: 'border-blue-600',
+    footerBg: 'bg-slate-900',
+    footerText: 'text-slate-300',
+    footerTextMuted: 'text-slate-500',
   },
   warm: {
     bg: 'bg-stone-50',
@@ -94,6 +129,13 @@ const themeClassMap: Record<ThemeId, ThemeClasses> = {
     heroGradient: 'bg-gradient-to-br from-amber-800 via-orange-900 to-stone-900',
     heroGradientText: 'text-white',
     heroGradientTextMuted: 'text-white/80',
+    accentBgLight: 'bg-orange-50',
+    taglineBg: 'bg-orange-50 text-orange-700',
+    cardShadow: 'shadow-sm hover:shadow-xl',
+    statDivider: 'border-orange-700',
+    footerBg: 'bg-stone-900',
+    footerText: 'text-stone-300',
+    footerTextMuted: 'text-stone-500',
   },
 }
 

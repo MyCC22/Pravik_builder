@@ -19,8 +19,8 @@ export function renderRestaurantDark(config: TemplateConfig): string {
   ]
 
   const sections: string[] = [
-    renderNavbar(content.siteName, links, t),
-    renderHeroBold(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl, content.heroImageUrl),
+    renderNavbar(content.siteName, links, t, content.ctaText, content.ctaUrl),
+    renderHeroBold(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl, content.heroImageUrl, content.tagline),
   ]
 
   if (content.menuItems?.length) sections.push(renderMenuDisplay(content.menuItems, t))
@@ -28,7 +28,7 @@ export function renderRestaurantDark(config: TemplateConfig): string {
   if (content.testimonials?.length) sections.push(renderTestimonials(content.testimonials, t))
   if (content.hours?.length) sections.push(renderHoursLocation(content.hours, t, content.address))
 
-  sections.push(renderBookingCTA(t, content.bookingText, content.bookingUrl))
+  sections.push(renderBookingCTA(t, content.bookingText, content.bookingUrl, content.bookingHeading, content.bookingSubheading))
   sections.push(renderFooter(content.siteName, links, t))
 
   return sections.join('\n')

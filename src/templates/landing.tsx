@@ -19,11 +19,11 @@ export function renderLanding(config: TemplateConfig): string {
   ]
 
   const sections: string[] = [
-    renderNavbar(content.siteName, links, t),
-    renderHeroCenter(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl, content.heroImageUrl),
+    renderNavbar(content.siteName, links, t, content.ctaText, content.ctaUrl),
+    renderHeroCenter(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl, content.heroImageUrl, content.tagline),
   ]
 
-  if (content.features?.length) sections.push(renderFeaturesGrid(content.features, t))
+  if (content.features?.length) sections.push(renderFeaturesGrid(content.features, t, content.featuresHeading, content.featuresSubheading))
   if (content.stats?.length) sections.push(renderStatsCounter(content.stats, t))
   if (content.testimonials?.length) sections.push(renderTestimonials(content.testimonials, t))
   if (content.pricing?.length) sections.push(renderPricingCards(content.pricing, t))

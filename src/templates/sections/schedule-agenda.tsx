@@ -4,14 +4,16 @@ import { escapeHtml } from '../utils'
 
 export function renderSchedule(schedule: ScheduleItem[], t: ThemeClasses): string {
   const items = schedule.map(s =>
-    `<div class="flex gap-6 py-6 border-b ${t.borderColor} last:border-0">
-      <div class="flex-shrink-0 w-20 text-right">
-        <span class="text-sm font-semibold ${t.accent}">${escapeHtml(s.time)}</span>
-      </div>
-      <div>
-        <h3 class="text-base font-semibold ${t.text}">${escapeHtml(s.title)}</h3>
-        ${s.speaker ? `<p class="text-sm ${t.accent} font-medium mt-1">${escapeHtml(s.speaker)}</p>` : ''}
-        ${s.description ? `<p class="mt-1 text-sm ${t.textMuted}">${escapeHtml(s.description)}</p>` : ''}
+    `<div class="animate-on-scroll ${t.surface} ${t.border} rounded-2xl p-6 mb-4 ${t.cardShadow}">
+      <div class="flex gap-6">
+        <div class="flex-shrink-0">
+          <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold ${t.taglineBg}">${escapeHtml(s.time)}</span>
+        </div>
+        <div>
+          <h3 class="text-base font-semibold ${t.text}">${escapeHtml(s.title)}</h3>
+          ${s.speaker ? `<p class="text-sm ${t.accent} font-medium mt-1">${escapeHtml(s.speaker)}</p>` : ''}
+          ${s.description ? `<p class="mt-1 text-sm ${t.textMuted}">${escapeHtml(s.description)}</p>` : ''}
+        </div>
       </div>
     </div>`
   ).join('')

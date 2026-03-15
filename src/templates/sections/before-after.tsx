@@ -4,14 +4,14 @@ import { escapeHtml } from '../utils'
 
 export function renderBeforeAfter(items: BeforeAfterItem[], t: ThemeClasses): string {
   const cards = items.map(item =>
-    `<div class="${t.surface} ${t.border} rounded-2xl p-8">
+    `<div class="animate-on-scroll ${t.surface} ${t.border} rounded-3xl p-10 ${t.cardShadow}">
       <h3 class="text-lg font-semibold ${t.text} mb-6">${escapeHtml(item.label)}</h3>
       <div class="grid grid-cols-2 gap-4">
-        <div class="rounded-xl bg-red-50 border border-red-200 p-4">
+        <div class="rounded-2xl bg-red-50 border border-red-200 p-5">
           <p class="text-xs font-semibold text-red-600 uppercase tracking-wide mb-2">Before</p>
           <p class="text-sm ${t.text}">${escapeHtml(item.before)}</p>
         </div>
-        <div class="rounded-xl bg-green-50 border border-green-200 p-4">
+        <div class="rounded-2xl bg-green-50 border border-green-200 p-5">
           <p class="text-xs font-semibold text-green-600 uppercase tracking-wide mb-2">After</p>
           <p class="text-sm ${t.text}">${escapeHtml(item.after)}</p>
         </div>

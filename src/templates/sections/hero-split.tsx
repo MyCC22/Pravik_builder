@@ -3,11 +3,11 @@ import { escapeHtml } from '../utils'
 
 export function renderHeroSplit(title: string, subtitle: string, t: ThemeClasses, tagline?: string, ctaText?: string, ctaUrl = '#contact', heroImageUrl?: string): string {
   const taglineHtml = tagline
-    ? `<p class="text-sm font-semibold ${t.accent} tracking-wide uppercase">${escapeHtml(tagline)}</p>`
+    ? `<span class="inline-block ${t.taglineBg} px-4 py-1.5 rounded-full text-sm font-semibold mb-6">${escapeHtml(tagline)}</span>`
     : ''
   const ctaHtml = ctaText
     ? `<div class="mt-10">
-        <a href="${ctaUrl}" class="${t.accentBg} ${t.accentBgHover} ${t.accentText} px-6 py-3.5 text-sm font-semibold rounded-xl shadow-sm transition-all duration-200">${escapeHtml(ctaText)}</a>
+        <a href="${escapeHtml(ctaUrl)}" class="${t.accentBg} ${t.accentBgHover} ${t.accentText} px-8 py-4 text-base font-semibold rounded-full shadow-lg transition-all duration-200">${escapeHtml(ctaText)}</a>
       </div>`
     : ''
 
@@ -19,16 +19,16 @@ export function renderHeroSplit(title: string, subtitle: string, t: ThemeClasses
     ? ''
     : `${t.heroGradient} flex items-center justify-center`
 
-  return `<section class="py-24 sm:py-32">
+  return `<section class="py-32 sm:py-44">
   <div class="max-w-7xl mx-auto px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
     <div>
       ${taglineHtml}
-      <h1 class="mt-4 text-4xl font-extrabold tracking-tight ${t.text} sm:text-5xl lg:text-6xl">${escapeHtml(title)}</h1>
+      <h1 class="text-4xl font-extrabold tracking-tight ${t.text} sm:text-5xl lg:text-6xl">${escapeHtml(title)}</h1>
       <p class="mt-6 text-lg leading-8 ${t.textMuted}">${escapeHtml(subtitle)}</p>
       ${ctaHtml}
     </div>
     <div class="relative">
-      <div class="aspect-[4/3] rounded-2xl ${imageBgClass} ${t.border} overflow-hidden">
+      <div class="aspect-[4/3] rounded-3xl ${imageBgClass} ${t.border} overflow-hidden shadow-2xl">
         ${imageHtml}
       </div>
     </div>

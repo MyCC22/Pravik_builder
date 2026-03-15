@@ -141,6 +141,17 @@ export async function renderAndStoreBlocks(
 
   const supabase = getSupabaseClient()
 
+  // Clear any existing blocks for this project before inserting new ones
+  const { error: deleteError } = await supabase
+    .from('blocks')
+    .delete()
+    .eq('project_id', projectId)
+
+  if (deleteError) {
+    console.error(`Failed to clear old blocks for project ${projectId}:`, deleteError.message)
+    // Continue anyway — inserting new blocks is more important
+  }
+
   // Store blocks in DB
   const blockRows = rawBlocks.map((b, i) => ({
     project_id: projectId,
@@ -257,6 +268,95 @@ function validateSections(
   return { ...config, content: contentRecord as unknown as TemplateConfig['content'] }
 }
 
+/**
+ * Attempt to repair common JSON issues from AI output:
+ * - Trailing commas before ] or }
+ * - Single-line // comments
+ * - Unescaped newlines inside strings
+ */
+function tryRepairJson(raw: string): string {
+  let s = raw
+  // Remove single-line comments (not inside strings — best-effort)
+  s = s.replace(/^\s*\/\/.*$/gm, '')
+  // Remove trailing commas before } or ]
+  s = s.replace(/,\s*([\]}])/g, '$1')
+  return s
+}
+
+/**
+ * Safely parse JSON with repair attempts.
+ * Returns parsed object or throws with informative error.
+ */
+function safeParseJson(raw: string): TemplateConfig {
+  // 1. Strip markdown fences
+  const cleaned = raw.replace(/```json?\n?/g, '').replace(/```/g, '').trim()
+
+  // 2. Try direct parse first
+  try {
+    return JSON.parse(cleaned) as TemplateConfig
+  } catch (_firstErr) {
+    // ignore — try repair
+  }
+
+  // 3. Try repaired JSON
+  const repaired = tryRepairJson(cleaned)
+  try {
+    return JSON.parse(repaired) as TemplateConfig
+  } catch (_repairErr) {
+    // ignore — try extraction
+  }
+
+  // 4. Try extracting JSON object from mixed text
+  const braceMatch = cleaned.match(/\{[\s\S]*\}/)
+  if (braceMatch) {
+    const extracted = tryRepairJson(braceMatch[0])
+    try {
+      return JSON.parse(extracted) as TemplateConfig
+    } catch (_extractErr) {
+      // fall through to error
+    }
+  }
+
+  throw new Error(
+    'Failed to parse AI response as JSON after repair attempts. ' +
+    `Raw output starts with: "${cleaned.slice(0, 120)}..."`
+  )
+}
+
+/**
+ * Validate that required content fields exist and provide defaults for missing ones.
+ */
+function validateRequiredFields(config: TemplateConfig): TemplateConfig {
+  const content = { ...config.content }
+
+  if (!content.siteName || typeof content.siteName !== 'string') {
+    console.warn('[content-validation] Missing siteName — using default')
+    content.siteName = 'My Website'
+  }
+  if (!content.heroTitle || typeof content.heroTitle !== 'string') {
+    console.warn('[content-validation] Missing heroTitle — using default')
+    content.heroTitle = content.siteName
+  }
+  if (!content.heroSubtitle || typeof content.heroSubtitle !== 'string') {
+    console.warn('[content-validation] Missing heroSubtitle — using default')
+    content.heroSubtitle = 'Welcome to our website'
+  }
+  if (!content.tagline || typeof content.tagline !== 'string') {
+    console.warn('[content-validation] Missing tagline — using default')
+    content.tagline = content.siteName
+  }
+  if (!content.ctaText || typeof content.ctaText !== 'string') {
+    console.warn('[content-validation] Missing ctaText — using default')
+    content.ctaText = 'Get Started'
+  }
+  if (!content.ctaUrl || typeof content.ctaUrl !== 'string') {
+    console.warn('[content-validation] Missing ctaUrl — using default')
+    content.ctaUrl = '#contact'
+  }
+
+  return { ...config, content }
+}
+
 export async function generateSite(
   message: string,
   projectId: string
@@ -270,17 +370,23 @@ export async function generateSite(
     messages: [{ role: 'user', content: message }],
   })
 
-  const text = response.content[0].type === 'text' ? response.content[0].text : ''
-  const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim()
-  const parsed = JSON.parse(cleaned) as TemplateConfig
+  const text = response.content[0]?.type === 'text' ? response.content[0].text : ''
+  if (!text) {
+    throw new Error('AI returned empty response — no content generated')
+  }
 
-  // Validate and fallback
+  const parsed = safeParseJson(text)
+
+  // Validate and fallback template + theme
   const template = resolveTemplateId(parsed.template)
   const theme: ThemeId = THEME_IDS.includes(parsed.theme as ThemeId)
     ? (parsed.theme as ThemeId)
     : 'clean'
 
   let config: TemplateConfig = { ...parsed, template, theme }
+
+  // Validate required content fields exist (provide defaults if missing)
+  config = validateRequiredFields(config)
 
   // Post-generation: strip sections that don't belong on this template/business
   config = validateSections(config, message)

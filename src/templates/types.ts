@@ -128,8 +128,8 @@ export interface TemplateContent {
   tagline: string
   heroTitle: string
   heroSubtitle: string
-  ctaText?: string
-  ctaUrl?: string
+  ctaText: string
+  ctaUrl: string
   footerLinks?: NavLink[]
 
   // Images
@@ -168,6 +168,16 @@ export interface TemplateContent {
   stats?: StatItem[]
   contactEmail?: string
   contactPhone?: string
+
+  // Section headings (optional — sections use sensible defaults)
+  servicesHeading?: string
+  servicesSubheading?: string
+  featuresHeading?: string
+  featuresSubheading?: string
+  contactHeading?: string
+  contactSubheading?: string
+  bookingHeading?: string
+  bookingSubheading?: string
 }
 
 export interface TemplateConfig {

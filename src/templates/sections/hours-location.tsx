@@ -1,6 +1,6 @@
 import type { HoursEntry } from '../types'
 import type { ThemeClasses } from '../theme-classes'
-import { escapeHtml } from '../utils'
+import { escapeHtml, getSvgIcon } from '../utils'
 
 export function renderHoursLocation(hours: HoursEntry[], t: ThemeClasses, address?: string): string {
   const hoursHtml = hours.map(h =>
@@ -11,12 +11,12 @@ export function renderHoursLocation(hours: HoursEntry[], t: ThemeClasses, addres
   ).join('')
 
   const addressHtml = address
-    ? `<div class="${t.surface} ${t.border} rounded-2xl p-8">
-        <h3 class="text-lg font-semibold ${t.text} mb-4">Location</h3>
-        <p class="${t.textMuted}">${escapeHtml(address)}</p>
-        <div class="mt-4 aspect-[16/9] rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center ${t.border}">
-          <span class="text-sm ${t.textMuted}">Map</span>
+    ? `<div class="animate-on-scroll ${t.surface} ${t.border} rounded-3xl p-10 ${t.cardShadow}">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-xl ${t.accentBgLight} ${t.accent} flex items-center justify-center">${getSvgIcon('map-pin')}</div>
+          <h3 class="text-lg font-semibold ${t.text}">Location</h3>
         </div>
+        <p class="${t.textMuted}">${escapeHtml(address)}</p>
       </div>`
     : ''
 
@@ -26,8 +26,11 @@ export function renderHoursLocation(hours: HoursEntry[], t: ThemeClasses, addres
       <h2 class="text-3xl font-bold tracking-tight ${t.text} sm:text-4xl">Visit us</h2>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-4xl mx-auto">
-      <div class="${t.surface} ${t.border} rounded-2xl p-8">
-        <h3 class="text-lg font-semibold ${t.text} mb-4">Hours</h3>
+      <div class="animate-on-scroll ${t.surface} ${t.border} rounded-3xl p-10 ${t.cardShadow}">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-xl ${t.accentBgLight} ${t.accent} flex items-center justify-center">${getSvgIcon('clock')}</div>
+          <h3 class="text-lg font-semibold ${t.text}">Hours</h3>
+        </div>
         ${hoursHtml}
       </div>
       ${addressHtml}

@@ -22,12 +22,12 @@ export function renderAgency(config: TemplateConfig): string {
   ]
 
   const sections: string[] = [
-    renderNavbar(content.siteName, links, t),
+    renderNavbar(content.siteName, links, t, content.ctaText, content.ctaUrl),
     renderHeroSplit(content.heroTitle, content.heroSubtitle, t, content.tagline, content.ctaText, content.ctaUrl, content.heroImageUrl),
   ]
 
   if (content.clients?.length) sections.push(renderClientLogos(content.clients, t))
-  if (content.features?.length) sections.push(renderFeaturesGrid(content.features, t))
+  if (content.features?.length) sections.push(renderFeaturesGrid(content.features, t, content.featuresHeading, content.featuresSubheading))
   if (content.galleryItems?.length) sections.push(renderGalleryGrid(content.galleryItems, t))
   if (content.process?.length) sections.push(renderProcessSteps(content.process, t))
   if (content.team?.length) sections.push(renderTeamGrid(content.team, t))
