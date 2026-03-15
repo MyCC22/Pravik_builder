@@ -34,6 +34,16 @@ export interface ThemeClasses {
   footerText: string
   /** Footer muted text */
   footerTextMuted: string
+  /** Form card background */
+  formCardBg: string
+  /** Form input background */
+  formInputBg: string
+  /** Form input border color */
+  formInputBorder: string
+  /** Form input text color */
+  formInputText: string
+  /** Form label/title text color */
+  formLabelText: string
 }
 
 const themeClassMap: Record<ThemeId, ThemeClasses> = {
@@ -61,6 +71,11 @@ const themeClassMap: Record<ThemeId, ThemeClasses> = {
     footerBg: 'bg-slate-900',
     footerText: 'text-slate-300',
     footerTextMuted: 'text-slate-500',
+    formCardBg: 'bg-white',
+    formInputBg: 'bg-gray-50',
+    formInputBorder: 'border-gray-200',
+    formInputText: 'text-gray-900',
+    formLabelText: 'text-gray-800',
   },
   bold: {
     bg: 'bg-zinc-950',
@@ -86,6 +101,11 @@ const themeClassMap: Record<ThemeId, ThemeClasses> = {
     footerBg: 'bg-zinc-900',
     footerText: 'text-zinc-400',
     footerTextMuted: 'text-zinc-600',
+    formCardBg: 'bg-zinc-900',
+    formInputBg: 'bg-zinc-800',
+    formInputBorder: 'border-zinc-700',
+    formInputText: 'text-white',
+    formLabelText: 'text-zinc-100',
   },
   vibrant: {
     bg: 'bg-gradient-to-br from-blue-50 via-purple-50 to-emerald-50',
@@ -111,6 +131,11 @@ const themeClassMap: Record<ThemeId, ThemeClasses> = {
     footerBg: 'bg-slate-900',
     footerText: 'text-slate-300',
     footerTextMuted: 'text-slate-500',
+    formCardBg: 'bg-white',
+    formInputBg: 'bg-gray-50',
+    formInputBorder: 'border-gray-200',
+    formInputText: 'text-gray-900',
+    formLabelText: 'text-gray-800',
   },
   warm: {
     bg: 'bg-stone-50',
@@ -136,6 +161,11 @@ const themeClassMap: Record<ThemeId, ThemeClasses> = {
     footerBg: 'bg-stone-900',
     footerText: 'text-stone-300',
     footerTextMuted: 'text-stone-500',
+    formCardBg: 'bg-white',
+    formInputBg: 'bg-stone-50',
+    formInputBorder: 'border-stone-200',
+    formInputText: 'text-stone-900',
+    formLabelText: 'text-stone-800',
   },
 }
 
