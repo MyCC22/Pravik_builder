@@ -326,7 +326,7 @@ export default function BuilderPage() {
 
   return (
     <BuilderLayout
-      preview={<PreviewPanel url={previewUrl} loading={loading} action={action} />}
+      preview={<PreviewPanel url={previewUrl} loading={loading} />}
       chat={(collapsed) => <ChatPanel messages={messages} onSend={handleSend} loading={loading} collapsed={collapsed} />}
       shareUrl={shareUrl}
       isVoiceCall={isVoiceCall}

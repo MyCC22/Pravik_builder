@@ -1,35 +1,23 @@
 'use client'
 
 import { Loading } from '@/components/ui/loading'
+import { GeneratingAnimation } from './generating-animation'
 
 interface PreviewPanelProps {
   url: string | null
   loading?: boolean
-  action?: string | null
 }
 
-function getLoadingText(action: string | null): string {
-  switch (action) {
-    case 'theme_changed':
-      return 'Switching theme...'
-    case 'edited':
-    case 'removed':
-    case 'reordered':
-      return 'Updating...'
-    default:
-      return 'Generating your website...'
-  }
-}
-
-export function PreviewPanel({ url, loading, action }: PreviewPanelProps) {
+export function PreviewPanel({ url, loading }: PreviewPanelProps) {
   if (loading) {
+    if (!url) {
+      return <GeneratingAnimation />
+    }
     return (
       <div className="flex items-center justify-center h-full bg-black">
         <div className="text-center space-y-3">
           <Loading size="lg" />
-          <p className="text-gray-400 text-sm">
-            {url ? 'Updating...' : getLoadingText(action ?? null)}
-          </p>
+          <p className="text-gray-400 text-sm">Updating...</p>
         </div>
       </div>
     )
