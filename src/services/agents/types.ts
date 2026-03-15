@@ -55,3 +55,10 @@ export interface ToolConfig {
   trustSignals: string[]
   fields: ToolField[]
 }
+
+export interface HeroFormConfig {
+  formTitle: string
+  submitText: string
+  successMessage: string
+  fields: ToolField[]
+}
