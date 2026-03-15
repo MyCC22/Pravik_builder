@@ -36,7 +36,7 @@ export function renderHeroForm(
   safeFields = safeFields.slice(0, 4)
 
   const titleHtml = formTitle
-    ? `<h3 class="text-lg font-bold ${t.formLabelText} mb-4 text-center">${escapeHtml(formTitle)}</h3>`
+    ? `<h3 class="text-base font-bold ${t.formLabelText} mb-3 text-center">${escapeHtml(formTitle)}</h3>`
     : ''
 
   const fieldsHtml = safeFields.map(f => renderField(f, t)).join('\n')
@@ -44,30 +44,30 @@ export function renderHeroForm(
   const formId = `hero-form-${toolId.slice(0, 8)}`
 
   return `
-<div class="relative z-10 max-w-xl mx-auto px-4 -mt-16">
-  <div id="${formId}" class="${t.formCardBg} rounded-2xl ${t.cardShadow} p-6 sm:p-8 border ${t.formInputBorder}">
+<div class="relative z-10 max-w-md mx-auto px-4 -mt-16">
+  <div id="${formId}" class="${t.formCardBg} rounded-2xl ${t.cardShadow} p-4 sm:p-6 border ${t.formInputBorder}">
     ${titleHtml}
     <form id="${formId}-form" onsubmit="return false;" novalidate>
-      <div class="space-y-4">
+      <div class="space-y-3">
         ${fieldsHtml}
       </div>
       <button
         type="submit"
         id="${formId}-btn"
-        class="${t.accentBg} ${t.accentBgHover} ${t.accentText} w-full mt-6 px-8 py-3.5 text-base font-semibold rounded-full shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+        class="${t.accentBg} ${t.accentBgHover} ${t.accentText} w-full mt-4 px-6 py-2.5 text-sm font-semibold rounded-full shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
       >
         <span id="${formId}-btn-text">${escapeHtml(submitText)}</span>
         <span id="${formId}-spinner" class="hidden w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
       </button>
-      <div id="${formId}-error" class="hidden mt-3 text-sm text-red-600 text-center"></div>
+      <div id="${formId}-error" class="hidden mt-2 text-xs text-red-600 text-center"></div>
     </form>
-    <div id="${formId}-success" class="hidden text-center py-6">
-      <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-green-100 mb-4">
-        <svg class="w-7 h-7 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+    <div id="${formId}-success" class="hidden text-center py-4">
+      <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-100 mb-2">
+        <svg class="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
         </svg>
       </div>
-      <p class="text-lg font-semibold ${t.formLabelText}">${escapeHtml(successMessage)}</p>
+      <p class="text-sm font-semibold ${t.formLabelText}">${escapeHtml(successMessage)}</p>
     </div>
   </div>
 </div>
@@ -79,8 +79,8 @@ function renderField(field: ToolField, t: ThemeClasses): string {
   const id = `hf-${field.name}`
   const req = field.required ? ' required' : ''
   const ph = field.placeholder ? ` placeholder="${escapeHtml(field.placeholder)}"` : ''
-  const label = `<label for="${id}" class="block text-sm font-medium ${t.formLabelText} mb-1">${escapeHtml(field.label)}${field.required ? ' *' : ''}</label>`
-  const inputClasses = `w-full px-4 py-2.5 ${t.formInputBg} ${t.formInputText} border ${t.formInputBorder} rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition`
+  const label = `<label for="${id}" class="block text-xs font-medium ${t.formLabelText} mb-0.5">${escapeHtml(field.label)}${field.required ? ' *' : ''}</label>`
+  const inputClasses = `w-full px-3 py-2 ${t.formInputBg} ${t.formInputText} border ${t.formInputBorder} rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition`
   const errorDiv = `<div id="${id}-err" class="hidden text-xs text-red-600 mt-1"></div>`
 
   if (field.type === 'dropdown' && field.options?.length) {
