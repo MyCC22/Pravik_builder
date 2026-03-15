@@ -8,10 +8,15 @@ import { renderTestimonials } from './sections/testimonials'
 import { renderHoursLocation } from './sections/hours-location'
 import { renderBookingCTA } from './sections/booking-cta'
 import { renderFooter } from './sections/footer'
+import { renderHeroForm } from './sections/hero-form'
 
 export function renderRestaurant(config: TemplateConfig): string {
   const { content } = config
   const t = getThemeClasses(config.theme)
+  const heroFormHtml = config.heroToolId && config.heroFormFields
+    ? renderHeroForm(config.heroToolId, config.heroFormFields, t,
+        content.heroFormSubmitText, content.heroFormSuccessMessage, content.heroFormTitle)
+    : undefined
   const links = content.footerLinks || [
     { label: 'Menu', href: '#menu' },
     { label: 'Gallery', href: '#gallery' },
@@ -21,7 +26,7 @@ export function renderRestaurant(config: TemplateConfig): string {
 
   const sections: string[] = [
     renderNavbar(content.siteName, links, t, content.ctaText, content.ctaUrl),
-    renderHeroSplit(content.heroTitle, content.heroSubtitle, t, content.tagline, content.ctaText, content.ctaUrl, content.heroImageUrl),
+    renderHeroSplit(content.heroTitle, content.heroSubtitle, t, content.tagline, content.ctaText, content.ctaUrl, content.heroImageUrl, heroFormHtml),
   ]
 
   if (content.menuItems?.length) sections.push(renderMenuDisplay(content.menuItems, t))

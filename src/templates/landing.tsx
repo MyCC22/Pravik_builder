@@ -8,10 +8,15 @@ import { renderTestimonials } from './sections/testimonials'
 import { renderPricingCards } from './sections/pricing-cards'
 import { renderCTABanner } from './sections/cta-banner'
 import { renderFooter } from './sections/footer'
+import { renderHeroForm } from './sections/hero-form'
 
 export function renderLanding(config: TemplateConfig): string {
   const { content } = config
   const t = getThemeClasses(config.theme)
+  const heroFormHtml = config.heroToolId && config.heroFormFields
+    ? renderHeroForm(config.heroToolId, config.heroFormFields, t,
+        content.heroFormSubmitText, content.heroFormSuccessMessage, content.heroFormTitle)
+    : undefined
   const links = content.footerLinks || [
     { label: 'Features', href: '#features' },
     { label: 'Pricing', href: '#pricing' },
@@ -20,7 +25,7 @@ export function renderLanding(config: TemplateConfig): string {
 
   const sections: string[] = [
     renderNavbar(content.siteName, links, t, content.ctaText, content.ctaUrl),
-    renderHeroCenter(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl, content.heroImageUrl, content.tagline),
+    renderHeroCenter(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl, content.heroImageUrl, content.tagline, heroFormHtml),
   ]
 
   if (content.features?.length) sections.push(renderFeaturesGrid(content.features, t, content.featuresHeading, content.featuresSubheading))

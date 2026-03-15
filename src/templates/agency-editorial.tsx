@@ -9,10 +9,15 @@ import { renderTeamGrid } from './sections/team-grid'
 import { renderTestimonials } from './sections/testimonials'
 import { renderCTABanner } from './sections/cta-banner'
 import { renderFooter } from './sections/footer'
+import { renderHeroForm } from './sections/hero-form'
 
 export function renderAgencyEditorial(config: TemplateConfig): string {
   const { content } = config
   const t = getThemeClasses(config.theme)
+  const heroFormHtml = config.heroToolId && config.heroFormFields
+    ? renderHeroForm(config.heroToolId, config.heroFormFields, t,
+        content.heroFormSubmitText, content.heroFormSuccessMessage, content.heroFormTitle)
+    : undefined
   const links = content.footerLinks || [
     { label: 'Work', href: '#work' },
     { label: 'Process', href: '#process' },
@@ -22,7 +27,7 @@ export function renderAgencyEditorial(config: TemplateConfig): string {
 
   const sections: string[] = [
     renderNavbar(content.siteName, links, t, content.ctaText, content.ctaUrl),
-    renderHeroBold(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl, content.heroImageUrl, content.tagline),
+    renderHeroBold(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl, content.heroImageUrl, content.tagline, heroFormHtml),
   ]
 
   if (content.clients?.length) sections.push(renderClientLogos(content.clients, t))

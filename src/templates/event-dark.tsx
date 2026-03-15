@@ -9,10 +9,15 @@ import { renderPricingCards } from './sections/pricing-cards'
 import { renderFAQ } from './sections/faq-accordion'
 import { renderCTABanner } from './sections/cta-banner'
 import { renderFooter } from './sections/footer'
+import { renderHeroForm } from './sections/hero-form'
 
 export function renderEventDark(config: TemplateConfig): string {
   const { content } = config
   const t = getThemeClasses(config.theme)
+  const heroFormHtml = config.heroToolId && config.heroFormFields
+    ? renderHeroForm(config.heroToolId, config.heroFormFields, t,
+        content.heroFormSubmitText, content.heroFormSuccessMessage, content.heroFormTitle)
+    : undefined
   const links = content.footerLinks || [
     { label: 'Speakers', href: '#speakers' },
     { label: 'Schedule', href: '#schedule' },
@@ -22,7 +27,7 @@ export function renderEventDark(config: TemplateConfig): string {
 
   const sections: string[] = [
     renderNavbar(content.siteName, links, t, content.ctaText, content.ctaUrl),
-    renderHeroBold(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl, content.heroImageUrl, content.tagline),
+    renderHeroBold(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl, content.heroImageUrl, content.tagline, heroFormHtml),
   ]
 
   if (content.stats?.length) sections.push(renderStatsCounter(content.stats, t))

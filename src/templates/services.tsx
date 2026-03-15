@@ -10,10 +10,15 @@ import { renderFAQ } from './sections/faq-accordion'
 import { renderBookingCTA } from './sections/booking-cta'
 import { renderContactSection } from './sections/contact-section'
 import { renderFooter } from './sections/footer'
+import { renderHeroForm } from './sections/hero-form'
 
 export function renderServices(config: TemplateConfig): string {
   const { content } = config
   const t = getThemeClasses(config.theme)
+  const heroFormHtml = config.heroToolId && config.heroFormFields
+    ? renderHeroForm(config.heroToolId, config.heroFormFields, t,
+        content.heroFormSubmitText, content.heroFormSuccessMessage, content.heroFormTitle)
+    : undefined
   const links = content.footerLinks || [
     { label: 'Services', href: '#services' },
     { label: 'Process', href: '#process' },
@@ -23,7 +28,7 @@ export function renderServices(config: TemplateConfig): string {
 
   const sections: string[] = [
     renderNavbar(content.siteName, links, t, content.ctaText, content.ctaUrl),
-    renderHeroCenter(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl, content.heroImageUrl, content.tagline),
+    renderHeroCenter(content.heroTitle, content.heroSubtitle, t, content.ctaText, content.ctaUrl, content.heroImageUrl, content.tagline, heroFormHtml),
   ]
 
   if (content.services?.length) sections.push(renderServiceCards(content.services, t, content.servicesHeading, content.servicesSubheading))
