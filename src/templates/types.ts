@@ -1,3 +1,5 @@
+import type { ToolField } from '../services/agents/types'
+
 export const TEMPLATE_IDS = [
   'landing', 'landing-bold',
   'services', 'services-bold',
@@ -178,10 +180,19 @@ export interface TemplateContent {
   contactSubheading?: string
   bookingHeading?: string
   bookingSubheading?: string
+
+  // Hero registration form (optional — AI decides)
+  includeHeroForm?: boolean
+  heroFormTitle?: string
+  heroFormSubmitText?: string
+  heroFormSuccessMessage?: string
 }
 
 export interface TemplateConfig {
   template: TemplateId
   theme: ThemeId
   content: TemplateContent
+  // Set by generator after creating hero_registration tool — not AI-generated
+  heroToolId?: string
+  heroFormFields?: ToolField[]
 }
