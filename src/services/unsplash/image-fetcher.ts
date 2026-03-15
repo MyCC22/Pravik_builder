@@ -1,5 +1,6 @@
 import { searchPhotos } from './client'
 import { hasStockImages, pickRandomImage, pickRandomImages, matchCategory } from './stock-images'
+import { searchPexelsHeroImage } from '@/services/pexels/client'
 import type { TemplateConfig } from '@/templates/types'
 
 export interface TemplateImages {
@@ -11,19 +12,36 @@ export interface TemplateImages {
  * Fetch images for a template config.
  *
  * Strategy:
- * 1. If stock images are available (prefetched), use those — instant, no API call.
+ * 1. Try Pexels API first for hero image (uses AI's specific heroImageQuery)
+ * 2. If stock images are available (prefetched), use those — instant, no API call.
  *    Uses businessCategory from the AI config to pick the right category.
- * 2. Otherwise, fall back to live Unsplash API calls (slower, needs API key).
- * 3. If both fail, return empty object — templates gracefully fall back to gradient placeholders.
+ * 3. Otherwise, fall back to live Unsplash API calls (slower, needs API key).
+ * 4. If both fail, return empty object — templates gracefully fall back to gradient placeholders.
  */
 export async function fetchTemplateImages(config: TemplateConfig): Promise<TemplateImages> {
-  // Try stock images first (instant, no API calls)
-  if (hasStockImages()) {
-    return fetchFromStockImages(config)
+  // 1. Try Pexels API first for hero image (uses AI's specific heroImageQuery)
+  const heroQuery = config.content.heroImageQuery || config.content.siteName || 'business'
+  let pexelsHeroUrl: string | null = null
+  try {
+    pexelsHeroUrl = await searchPexelsHeroImage(heroQuery)
+  } catch {
+    // Non-fatal — fall through to stock/Unsplash
   }
 
-  // Fall back to live API
-  return fetchFromUnsplashApi(config)
+  // 2. Get gallery images (and fallback hero) from existing stock/Unsplash chain
+  let images: TemplateImages
+  if (hasStockImages()) {
+    images = fetchFromStockImages(config)
+  } else {
+    images = await fetchFromUnsplashApi(config)
+  }
+
+  // 3. Override hero with Pexels result if available
+  if (pexelsHeroUrl) {
+    images.heroImageUrl = pexelsHeroUrl
+  }
+
+  return images
 }
 
 /**
