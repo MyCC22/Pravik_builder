@@ -113,7 +113,7 @@ Decide whether this business would benefit from an inline lead-capture form in t
 
 Set "includeHeroForm": true/false in the content object.
 If true, also provide a top-level "heroFormConfig" object (NOT inside content) with:
-- "formTitle": short action-oriented heading (e.g., "Get Your Free Quote")
+- "formTitle": short action-oriented heading that matches the business type. NEVER use generic "consultation" language. Examples by category: fitness/coaching → "Book a Free Session", salon/spa → "Reserve Your Spot", plumbing/repair → "Get Your Free Quote", legal → "Schedule a Call", tutoring → "Book a Free Lesson", photography → "Check Availability". Always match the business's actual service.
 - "submitText": button label (e.g., "Get Started", "Book Now")
 - "successMessage": thank-you text shown inline after submission
 - "fields": array of 2-4 fields, each with: name, label, type, required, placeholder, options (for dropdowns)
